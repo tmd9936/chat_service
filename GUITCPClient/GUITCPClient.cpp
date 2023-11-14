@@ -14,6 +14,7 @@ enum PROTOCOL
 	INTRO,
 	CHATT_NICKNAME,
 	NICKNAME_EROR,
+	NICKNAME_COMPLETE,
 	NICKNAME_LIST,
 	CHATT_MSG,
 	CHATT_OUT,
@@ -35,6 +36,8 @@ struct _MyInfo
 	char sendbuf[BUFSIZE];
 	char recvbuf[BUFSIZE];
 }*MyInfo;
+
+char nickname[1024];
 
 bool PacketRecv(SOCKET, char*);
 
@@ -70,6 +73,8 @@ HWND hNameCheck; // 이름 체크 컨트롤
 
 HANDLE hClientMain, hRecvThread;
 
+bool isNickNameOK = false;
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                    LPSTR lpCmdLine, int nCmdShow)
 {
@@ -94,6 +99,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	// 이벤트 제거
 	CloseHandle(hWriteEvent);
 	CloseHandle(hReadEvent);
+	//CloseHandle(hNameEvent);
 
 	CloseHandle(hClientMain);
 	CloseHandle(hRecvThread);
@@ -112,6 +118,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 // 대화상자 프로시저
 BOOL CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+	int size = 0;
 	switch(uMsg){
 	case WM_INITDIALOG:
 		hEdit1 = GetDlgItem(hDlg, IDC_EDIT1);
@@ -128,6 +135,8 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	case WM_COMMAND:
 		switch(LOWORD(wParam)){
 		case IDOK:
+			if (!isNickNameOK)
+				return TRUE;
 			EnableWindow(hSendButton, FALSE); // 보내기 버튼 비활성화
 			WaitForSingleObject(hReadEvent, INFINITE); // 읽기 완료 기다리기
 			GetDlgItemText(hDlg, IDC_EDIT1, buf, BUFSIZE+1);
@@ -135,12 +144,18 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			SetWindowText(hEdit1, "");
 			SetFocus(hEdit1);			
 			return TRUE;
+		case IDC_BUTTON1:
+			WaitForSingleObject(hReadEvent, INFINITE); // 읽기 완료 기다리기
+			GetDlgItemText(hDlg, IDC_EDIT3, nickname, 1025);
+			SetEvent(hWriteEvent); // 쓰기 완료 알리기
+
+			size = PackPacket(buf, PROTOCOL::CHATT_NICKNAME, nickname);
+			send(MyInfo->sock, buf, size, 0);
+			return TRUE;
 		case IDCANCEL:
 			//채팅 종료 알리기
 			EndDialog(hDlg, IDCANCEL);
 			return TRUE;
-		case IDC_BUTTON1:
-			break;
 		}
 		return FALSE;
 	}
@@ -314,7 +329,7 @@ bool PacketRecv(SOCKET _sock, char* _buf)
 
 DWORD CALLBACK RecvThread(LPVOID _ptr)
 {
-	PROTOCOL protocol;
+	PROTOCOL protocol{};
 	int size = 0;	
 	char nickname[NICKNAMESIZE] = { 0 };
 	char msg[BUFSIZE] = { 0 };
@@ -337,11 +352,19 @@ DWORD CALLBACK RecvThread(LPVOID _ptr)
 			break;
 
 		case NICKNAME_EROR:
-			
+			isNickNameOK = false;
+			DisplayText("NickName Set Error");
 			break;
+
+		case NICKNAME_COMPLETE:
+			DisplayText("NickName Set Complete");
+			isNickNameOK = true;
+			break;
+
 		case NICKNAME_LIST:
 			
 			break;
+
 		case CHATT_MSG:
 			
 			break;

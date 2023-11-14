@@ -30,6 +30,7 @@ enum PROTOCOL
 	INTRO,
 	CHATT_NICKNAME,
 	NICKNAME_EROR, 	
+	NICKNAME_COMPLETE,
 	NICKNAME_LIST,	
 	CHATT_MSG,
 	CHATT_OUT,
@@ -530,13 +531,35 @@ void MakeExitMessage(const char* _nick, char* _msg)
 
 void NickNameSetting(_ClientInfo* _clientinfo)
 {
+	char nName[BUFSIZE] = { 0 };
+	int size = 0;
 	EnterCriticalSection(&cs);
 	
+	UnPackPacket(_clientinfo->recvbuf, nName);
 
+	if (!strcmp(_clientinfo->nickname, nName))
+	{
+		LeaveCriticalSection(&cs);
+		return;
+	}
 
+	if (!NicknameCheck(nName) )
+	{
+		LeaveCriticalSection(&cs);
+		size = PackPacket(_clientinfo->sendbuf, PROTOCOL::NICKNAME_EROR, "nickName Set Error");
+		send(_clientinfo->sock, _clientinfo->sendbuf, size, 0);
+		return;
+	}
 
+	RemoveNickName(_clientinfo->nickname);
+
+	strcpy(_clientinfo->nickname, nName);
+	AddNickName(nName);
 
 	LeaveCriticalSection(&cs);	
+	size = PackPacket(_clientinfo->sendbuf, PROTOCOL::NICKNAME_COMPLETE, "nickName Set Complete");
+	send(_clientinfo->sock, _clientinfo->sendbuf, size, 0);
+
 }
 
 void ChattingMessageProcess(_ClientInfo* _clientinfo)
