@@ -65,7 +65,6 @@ void MakeExitMessage(const char* , char* );
 _ClientInfo* AddClient(SOCKET sock, SOCKADDR_IN clientaddr);
 void RemoveClient(_ClientInfo* ptr);
 
-
 void AddNickName(const char*);
 void RemoveNickName(const char*);
 
@@ -82,6 +81,8 @@ bool NickNameSetting(_ClientInfo*);
 void ChattingMessageProcess(_ClientInfo*);
 void ChattingOutProcess(_ClientInfo*);
 void ChattingEnterProcess(_ClientInfo*);
+
+void NickNameUpdate();
 
 _ClientInfo* ClientInfo[MAXUSER];
 char* NickNameList[MAXUSER];
@@ -432,12 +433,12 @@ void RemoveClient(_ClientInfo* ptr)
 		ntohs(ptr->clientaddr.sin_port));
 
 	EnterCriticalSection(&cs);
-
 	
 	for (int i = 0; i < Client_Count; i++)
 	{
 		if (ClientInfo[i] == ptr)
 		{			
+			RemoveNickName(ClientInfo[i]->nickname);
 			delete ptr;
 			int j;
 			for (j = i; j < Client_Count - 1; j++)
@@ -450,6 +451,8 @@ void RemoveClient(_ClientInfo* ptr)
 	}
 
 	Client_Count--;
+
+	NickNameUpdate();
 	LeaveCriticalSection(&cs);
 }
 
@@ -579,10 +582,8 @@ void ChattingEnterProcess(_ClientInfo* _clientinfo)
 {
 	EnterCriticalSection(&cs);
 
-	int size = 0;
-	size = PackPacket(_clientinfo->sendbuf, PROTOCOL::NICKNAME_LIST, NickNameList, Nick_Count);
+	NickNameUpdate();
 
-	send(_clientinfo->sock, _clientinfo->sendbuf, size, 0);
 	LeaveCriticalSection(&cs);
 }
 
@@ -593,4 +594,14 @@ void ChattingOutProcess(_ClientInfo* _clientinfo)
 	
 
 	LeaveCriticalSection(&cs);
+}
+
+void NickNameUpdate()
+{
+	for (int i = 0; i < Client_Count; i++)
+	{
+		int size = 0;
+		size = PackPacket(ClientInfo[i]->sendbuf, PROTOCOL::NICKNAME_LIST, NickNameList, Nick_Count);
+		send(ClientInfo[i]->sock, ClientInfo[i]->sendbuf, size, 0);
+	}
 }

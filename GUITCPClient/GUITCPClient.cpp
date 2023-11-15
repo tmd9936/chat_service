@@ -405,11 +405,12 @@ void UpdateUserList(char* _buf)
 	vector<string> data;
 	UnPackPacket(_buf, data, count);
 
+	SendMessage(hUserList, LB_RESETCONTENT, 0, 0);
 	for (int i = 0; i < count; i++)
 	{
 		int pos = (int)SendMessage(hUserList, LB_ADDSTRING, 0,
 			(LPARAM)data[i].c_str());
-		SendMessage(hUserList, LB_SETITEMDATA, pos, (LPARAM)i);
+		//SendMessage(hUserList, LB_SETITEMDATA, pos, (LPARAM)i);
 	}
 }
 
