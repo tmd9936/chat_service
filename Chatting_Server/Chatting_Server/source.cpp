@@ -536,9 +536,10 @@ void MakeExitMessage(const char* _nick, char* _msg)
 
 bool NickNameSetting(_ClientInfo* _clientinfo)
 {
+	EnterCriticalSection(&cs);
+
 	char nName[BUFSIZE] = { 0 };
 	int size = 0;
-	EnterCriticalSection(&cs);
 	
 	UnPackPacket(_clientinfo->recvbuf, nName); // ´Ð³×ÀÓ È¹µæ
 
@@ -577,6 +578,8 @@ bool NickNameSetting(_ClientInfo* _clientinfo)
 
 void ChattingMessageProcess(_ClientInfo* _clientinfo)
 {
+	EnterCriticalSection(&cs);
+
 	char chatText[BUFSIZE] = { 0 };
 	char message[BUFSIZE] = { 0 };
 	int size = 0;
@@ -586,8 +589,6 @@ void ChattingMessageProcess(_ClientInfo* _clientinfo)
 
 	UnPackPacket(_clientinfo->recvbuf, chatText); // Ã¤ÆÃ ³»¿ë È¹µæ
 	strcat(message, chatText);
-
-	EnterCriticalSection(&cs);
 
 	for (int i = 0; i < Client_Count; i++)
 	{
@@ -613,7 +614,20 @@ void ChattingOutProcess(_ClientInfo* _clientinfo)
 {
 	EnterCriticalSection(&cs);
 
-	
+	char nName[BUFSIZE] = { 0 };
+	int size = 0;
+
+	UnPackPacket(_clientinfo->recvbuf, nName); // ´Ð³×ÀÓ È¹µæ
+
+	char message[BUFSIZE] = { 0 };
+	MakeExitMessage(nName, message);
+
+	for (int i = 0; i < Client_Count; i++)
+	{
+		int size = 0;
+		size = PackPacket(ClientInfo[i]->sendbuf, PROTOCOL::CHATT_OUT, message);
+		send(ClientInfo[i]->sock, ClientInfo[i]->sendbuf, size, 0);
+	}
 
 	LeaveCriticalSection(&cs);
 }

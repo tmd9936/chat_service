@@ -169,15 +169,15 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			return TRUE;
 		case IDCANCEL:
 			//채팅 종료 알리기
+			size = PackPacket(buf, PROTOCOL::CHATT_OUT, nickname);
+			send(MyInfo->sock, buf, size, 0);
 			EndDialog(hDlg, IDCANCEL);
-			if (MyInfo)
-				MyInfo->state = CHATT_OUT_STATE;
 			return TRUE;
 		}
 		return FALSE;
 	case WM_CLOSE:
-		if (MyInfo)
-			MyInfo->state = CHATT_OUT_STATE;
+		size = PackPacket(buf, PROTOCOL::CHATT_OUT, nickname);
+		send(MyInfo->sock, buf, size, 0);
 		PostQuitMessage(0);
 		return TRUE;
 	}
@@ -399,6 +399,12 @@ DWORD CALLBACK RecvThread(LPVOID _ptr)
 			memset(msg, 0, BUFSIZE);
 			UnPackPacket(MyInfo->recvbuf, msg);
 			DisplayText(hChat, "%s\r\n", msg);
+			break;
+
+		case CHATT_OUT:
+			memset(msg, 0, BUFSIZE);
+			UnPackPacket(MyInfo->recvbuf, msg);
+			DisplayText(hLog, "%s\r\n", msg);
 			break;
 		}
 
