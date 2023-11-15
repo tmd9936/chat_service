@@ -212,6 +212,10 @@ DWORD CALLBACK ProcessClient(LPVOID  _ptr)
 
 			switch (protocol)
 			{
+			case CHATT_NICKNAME:
+
+				NickNameSetting(Client_ptr);
+				break;
 			case CHATT_MSG:
 				
 				ChattingMessageProcess(Client_ptr);

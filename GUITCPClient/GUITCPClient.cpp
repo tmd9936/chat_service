@@ -94,7 +94,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
 	DialogBox(hInstance, MAKEINTRESOURCE(IDD_DIALOG1), NULL, DlgProc);
 
-	WaitForSingleObject(hClientMain, INFINITE);
+	WaitForSingleObject(hClientMain, 1000);
 
 	// 이벤트 제거
 	CloseHandle(hWriteEvent);
@@ -104,8 +104,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	CloseHandle(hClientMain);
 	CloseHandle(hRecvThread);
 
-	CloseHandle(hName);
-	CloseHandle(hNameCheck);
+	//CloseHandle(hName);
+	//CloseHandle(hNameCheck);
 
 	// closesocket()
 	closesocket(MyInfo->sock);
@@ -146,18 +146,24 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			return TRUE;
 		case IDC_BUTTON1:
 			WaitForSingleObject(hReadEvent, INFINITE); // 읽기 완료 기다리기
-			GetDlgItemText(hDlg, IDC_EDIT3, nickname, 1025);
+			GetDlgItemText(hDlg, IDC_EDIT3, nickname, 1024);
 			SetEvent(hWriteEvent); // 쓰기 완료 알리기
-
 			size = PackPacket(buf, PROTOCOL::CHATT_NICKNAME, nickname);
 			send(MyInfo->sock, buf, size, 0);
 			return TRUE;
 		case IDCANCEL:
 			//채팅 종료 알리기
 			EndDialog(hDlg, IDCANCEL);
+			if (MyInfo)
+				MyInfo->state = CHATT_OUT_STATE;
 			return TRUE;
 		}
 		return FALSE;
+	case WM_CLOSE:
+		if (MyInfo)
+			MyInfo->state = CHATT_OUT_STATE;
+		PostQuitMessage(0);
+		return TRUE;
 	}
 	return FALSE;
 }
@@ -353,11 +359,11 @@ DWORD CALLBACK RecvThread(LPVOID _ptr)
 
 		case NICKNAME_EROR:
 			isNickNameOK = false;
-			DisplayText("NickName Set Error");
+			DisplayText("NickName Set Error %d", rand());
 			break;
 
 		case NICKNAME_COMPLETE:
-			DisplayText("NickName Set Complete");
+			DisplayText("NickName Set Complete %d", rand());\
 			isNickNameOK = true;
 			break;
 
