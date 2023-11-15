@@ -3,7 +3,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <commctrl.h>
+#include <string>
+#include <vector>
 #include "resource.h"
+
+using namespace std;
 
 #define SERVERIP   "172.30.1.85"
 #define SERVERPORT 9000
@@ -63,8 +67,7 @@ int PackPacket(char*, PROTOCOL, const char*);
 
 void UnPackPacket(const char*, char*, int&);
 void UnPackPacket(const char*, char*);
-
-void InitUserListView(HWND hDlg);
+void UnPackPacket(const char*, vector<string>&, int&);
 
 char buf[BUFSIZE+1]; // 데이터 송수신 버퍼
 HANDLE hReadEvent, hWriteEvent; // 이벤트
@@ -133,10 +136,10 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		hName = GetDlgItem(hDlg, IDC_NAME);
 		hNameCheck = GetDlgItem(hDlg, IDC_NAMECHECK);
 
+		hUserList = GetDlgItem(hDlg, IDC_LIST1);
 		hChat = GetDlgItem(hDlg, IDC_CHAT);
 
 		hSendButton = GetDlgItem(hDlg, IDOK);
-		InitUserListView(hDlg);
 		SendMessage(hMessage, EM_SETLIMITTEXT, BUFSIZE, 0);	
 		hRecvThread = CreateThread(NULL, 0, RecvThread, NULL, 0, NULL);
 		MyInfo->state = INITE_STATE;
@@ -175,22 +178,6 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		return TRUE;
 	}
 	return FALSE;
-}
-
-// 유저 리스트 초기화 
-void InitUserListView(HWND hDlg)
-{
-	LVCOLUMN COL;
-	hUserList = GetDlgItem(hDlg, IDC_LIST1);
-	ListView_SetExtendedListViewStyle(hUserList, LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
-	//리스트뷰 스타일 초기화
-	COL.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT | LVCF_SUBITEM;
-	COL.fmt = LVCFMT_LEFT;
-
-	COL.cx = 100;
-	COL.pszText = "Users";
-	COL.iSubItem = 1;
-	ListView_InsertColumn(hUserList, 1, &COL);
 }
 
 // 편집 컨트롤 출력 함수
@@ -414,9 +401,16 @@ void UpdateUserList(char* _buf)
 		return;
 
 	int count = 0;
-	char str[BUFSIZE] = { 0 };
-	UnPackPacket(_buf, str, count);
+	//char str[BUFSIZE] = { 0 };
+	vector<string> data;
+	UnPackPacket(_buf, data, count);
 
+	for (int i = 0; i < count; i++)
+	{
+		int pos = (int)SendMessage(hUserList, LB_ADDSTRING, 0,
+			(LPARAM)data[i].c_str());
+		SendMessage(hUserList, LB_SETITEMDATA, pos, (LPARAM)i);
+	}
 }
 
 
@@ -486,6 +480,31 @@ void UnPackPacket(const char* _buf, char* _str, int& _count)
 		_str = _str + strsize;
 		strcat(_str, ",");
 		_str++;
+	}
+
+}
+
+void UnPackPacket(const char* _buf, vector<string>& vec, int& _count)
+{
+	const char* ptr = _buf + sizeof(PROTOCOL);
+
+	memcpy(&_count, ptr, sizeof(_count));
+	ptr = ptr + sizeof(_count);
+
+	vec.reserve(_count);
+
+	char _str[BUFSIZE] = { 0 };
+	for (int i = 0; i < _count; i++)
+	{
+		int strsize;
+		memcpy(&strsize, ptr, sizeof(strsize));
+		ptr = ptr + sizeof(strsize);
+
+		memcpy(_str, ptr, strsize);
+		ptr = ptr + strsize;
+		string name = _str;
+
+		vec.push_back(move(_str));
 	}
 
 }

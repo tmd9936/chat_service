@@ -156,6 +156,7 @@ DWORD CALLBACK ProcessClient(LPVOID  _ptr)
 	PROTOCOL protocol{};
 
 	bool breakflag = false;
+	bool isNicNameSet = true;
 
 	while (1)
 	{
@@ -184,7 +185,6 @@ DWORD CALLBACK ProcessClient(LPVOID  _ptr)
 
 			protocol = GetProtocol(Client_ptr->recvbuf);
 
-			bool isNicNameSet = true;
 			switch (protocol)
 			{
 			case CHATT_NICKNAME:
