@@ -78,7 +78,7 @@ PROTOCOL GetProtocol(const char*);
 
 void UnPackPacket(const char*, char*);//CHATT_NICKNAME, CHATT_MSG
 
-void NickNameSetting(_ClientInfo*);
+bool NickNameSetting(_ClientInfo*);
 void ChattingMessageProcess(_ClientInfo*);
 void ChattingOutProcess(_ClientInfo*);
 void ChattingEnterProcess(_ClientInfo*);
@@ -153,7 +153,7 @@ DWORD CALLBACK ProcessClient(LPVOID  _ptr)
 	_ClientInfo* Client_ptr = (_ClientInfo*)_ptr;
 		
 	int size;	
-	PROTOCOL protocol;
+	PROTOCOL protocol{};
 
 	bool breakflag = false;
 
@@ -184,20 +184,22 @@ DWORD CALLBACK ProcessClient(LPVOID  _ptr)
 
 			protocol = GetProtocol(Client_ptr->recvbuf);
 
+			bool isNicNameSet = true;
 			switch (protocol)
 			{
 			case CHATT_NICKNAME:
-				
-				NickNameSetting(Client_ptr);
+				isNicNameSet = NickNameSetting(Client_ptr);
 				break;
 			}
-
 			
-			ChattingEnterProcess(Client_ptr);
-
-			if (Client_ptr->state != CONNECT_END_STATE)
+			if (isNicNameSet)
 			{
-				Client_ptr->state = CHATTING_STATE;
+				ChattingEnterProcess(Client_ptr);
+
+				if (Client_ptr->state != CONNECT_END_STATE)
+				{
+					Client_ptr->state = CHATTING_STATE;
+				}
 			}
 
 			break;
@@ -212,10 +214,6 @@ DWORD CALLBACK ProcessClient(LPVOID  _ptr)
 
 			switch (protocol)
 			{
-			case CHATT_NICKNAME:
-
-				NickNameSetting(Client_ptr);
-				break;
 			case CHATT_MSG:
 				
 				ChattingMessageProcess(Client_ptr);
@@ -533,26 +531,26 @@ void MakeExitMessage(const char* _nick, char* _msg)
 }
 
 
-void NickNameSetting(_ClientInfo* _clientinfo)
+bool NickNameSetting(_ClientInfo* _clientinfo)
 {
 	char nName[BUFSIZE] = { 0 };
 	int size = 0;
 	EnterCriticalSection(&cs);
 	
-	UnPackPacket(_clientinfo->recvbuf, nName);
+	UnPackPacket(_clientinfo->recvbuf, nName); // 닉네임 획득
 
-	if (!strcmp(_clientinfo->nickname, nName))
+	if (!strcmp(_clientinfo->nickname, nName)) // 현재 닉네임과 곂치는지 확인
 	{
 		LeaveCriticalSection(&cs);
-		return;
+		return false;
 	}
 
-	if (!NicknameCheck(nName) )
+	if (!NicknameCheck(nName) ) // 이미 존재하는 닉네임인지 확인
 	{
 		LeaveCriticalSection(&cs);
-		size = PackPacket(_clientinfo->sendbuf, PROTOCOL::NICKNAME_EROR, "nickName Set Error");
+		size = PackPacket(_clientinfo->sendbuf, PROTOCOL::NICKNAME_EROR, "NickName Set Error");
 		send(_clientinfo->sock, _clientinfo->sendbuf, size, 0);
-		return;
+		return false;
 	}
 
 	RemoveNickName(_clientinfo->nickname);
@@ -560,10 +558,12 @@ void NickNameSetting(_ClientInfo* _clientinfo)
 	strcpy(_clientinfo->nickname, nName);
 	AddNickName(nName);
 
-	LeaveCriticalSection(&cs);	
-	size = PackPacket(_clientinfo->sendbuf, PROTOCOL::NICKNAME_COMPLETE, "nickName Set Complete");
+	size = PackPacket(_clientinfo->sendbuf, PROTOCOL::NICKNAME_COMPLETE, "NickName Set Complete");
 	send(_clientinfo->sock, _clientinfo->sendbuf, size, 0);
 
+	LeaveCriticalSection(&cs);	
+
+	return true;
 }
 
 void ChattingMessageProcess(_ClientInfo* _clientinfo)
@@ -579,8 +579,10 @@ void ChattingEnterProcess(_ClientInfo* _clientinfo)
 {
 	EnterCriticalSection(&cs);
 
-	
+	int size = 0;
+	size = PackPacket(_clientinfo->sendbuf, PROTOCOL::NICKNAME_LIST, NickNameList, Nick_Count);
 
+	send(_clientinfo->sock, _clientinfo->sendbuf, size, 0);
 	LeaveCriticalSection(&cs);
 }
 

@@ -2,6 +2,7 @@
 #include <winsock2.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <commctrl.h>
 #include "resource.h"
 
 #define SERVERIP   "172.30.1.85"
@@ -55,21 +56,26 @@ int recvn(SOCKET , char*, int, int);
 DWORD WINAPI ClientMain(LPVOID);
 DWORD CALLBACK RecvThread(LPVOID);
 
+void UpdateUserList(char*);
+
 PROTOCOL GetProtocol(const char*);
 int PackPacket(char*, PROTOCOL, const char*);
 
 void UnPackPacket(const char*, char*, int&);
 void UnPackPacket(const char*, char*);
 
+void InitUserListView(HWND hDlg);
 
 char buf[BUFSIZE+1]; // 데이터 송수신 버퍼
 HANDLE hReadEvent, hWriteEvent; // 이벤트
 HANDLE hNameEvent; // 이벤트
 
 HWND hSendButton; // 보내기 버튼
-HWND hEdit1, hEdit2; // 편집 컨트롤
+HWND hMessage, hLog; // 편집 컨트롤
 HWND hName; // 이름 컨트롤
 HWND hNameCheck; // 이름 체크 컨트롤
+HWND hUserList; // 유저 리스트 컨트롤
+HWND hChat; // 채팅 화면 컨트롤
 
 HANDLE hClientMain, hRecvThread;
 
@@ -121,14 +127,17 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	int size = 0;
 	switch(uMsg){
 	case WM_INITDIALOG:
-		hEdit1 = GetDlgItem(hDlg, IDC_EDIT1);
-		hEdit2 = GetDlgItem(hDlg, IDC_EDIT2);
+		hMessage = GetDlgItem(hDlg, IDC_MESSAGE);
+		hLog = GetDlgItem(hDlg, IDC_LOG);
 
-		hName = GetDlgItem(hDlg, IDC_EDIT3);
-		hNameCheck = GetDlgItem(hDlg, IDC_BUTTON1);
+		hName = GetDlgItem(hDlg, IDC_NAME);
+		hNameCheck = GetDlgItem(hDlg, IDC_NAMECHECK);
 
-		hSendButton = GetDlgItem(hDlg, IDOK);		
-		SendMessage(hEdit1, EM_SETLIMITTEXT, BUFSIZE, 0);	
+		hChat = GetDlgItem(hDlg, IDC_CHAT);
+
+		hSendButton = GetDlgItem(hDlg, IDOK);
+		InitUserListView(hDlg);
+		SendMessage(hMessage, EM_SETLIMITTEXT, BUFSIZE, 0);	
 		hRecvThread = CreateThread(NULL, 0, RecvThread, NULL, 0, NULL);
 		MyInfo->state = INITE_STATE;
 		return TRUE;
@@ -139,14 +148,14 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				return TRUE;
 			EnableWindow(hSendButton, FALSE); // 보내기 버튼 비활성화
 			WaitForSingleObject(hReadEvent, INFINITE); // 읽기 완료 기다리기
-			GetDlgItemText(hDlg, IDC_EDIT1, buf, BUFSIZE+1);
+			GetDlgItemText(hDlg, IDC_MESSAGE, buf, BUFSIZE+1);
 			SetEvent(hWriteEvent); // 쓰기 완료 알리기
-			SetWindowText(hEdit1, "");
-			SetFocus(hEdit1);			
+			SetWindowText(hMessage, "");
+			SetFocus(hMessage);			
 			return TRUE;
-		case IDC_BUTTON1:
+		case IDC_NAMECHECK:
 			WaitForSingleObject(hReadEvent, INFINITE); // 읽기 완료 기다리기
-			GetDlgItemText(hDlg, IDC_EDIT3, nickname, 1024);
+			GetDlgItemText(hDlg, IDC_NAME, nickname, 1024);
 			SetEvent(hWriteEvent); // 쓰기 완료 알리기
 			size = PackPacket(buf, PROTOCOL::CHATT_NICKNAME, nickname);
 			send(MyInfo->sock, buf, size, 0);
@@ -168,6 +177,21 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	return FALSE;
 }
 
+// 유저 리스트 초기화 
+void InitUserListView(HWND hDlg)
+{
+	LVCOLUMN COL;
+	hUserList = GetDlgItem(hDlg, IDC_LIST1);
+	ListView_SetExtendedListViewStyle(hUserList, LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
+	//리스트뷰 스타일 초기화
+	COL.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT | LVCF_SUBITEM;
+	COL.fmt = LVCFMT_LEFT;
+
+	COL.cx = 100;
+	COL.pszText = "Users";
+	COL.iSubItem = 1;
+	ListView_InsertColumn(hUserList, 1, &COL);
+}
 
 // 편집 컨트롤 출력 함수
 void DisplayText(char *fmt, ...)
@@ -178,9 +202,9 @@ void DisplayText(char *fmt, ...)
 	char cbuf[BUFSIZE+256];
 	vsprintf(cbuf, fmt, arg);
 
-	int nLength = GetWindowTextLength(hEdit2);
-	SendMessage(hEdit2, EM_SETSEL, nLength, nLength);
-	SendMessage(hEdit2, EM_REPLACESEL, FALSE, (LPARAM)cbuf);
+	int nLength = GetWindowTextLength(hLog);
+	SendMessage(hLog, EM_SETSEL, nLength, nLength);
+	SendMessage(hLog, EM_REPLACESEL, FALSE, (LPARAM)cbuf);
 
 	va_end(arg);
 }
@@ -194,7 +218,7 @@ void err_quit(const char *msg)
 		NULL, WSAGetLastError(),
 		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
 		(LPTSTR)&lpMsgBuf, 0, NULL);
-	MessageBox(NULL, (LPCTSTR)lpMsgBuf, msg, MB_ICONERROR);
+	MessageBox(hLog, (LPCTSTR)lpMsgBuf, msg, MB_ICONERROR);
 	LocalFree(lpMsgBuf);
 	exit(1);
 }
@@ -245,7 +269,6 @@ DWORD WINAPI ClientMain(LPVOID arg)
 	// socket()
 	MyInfo->sock = socket(AF_INET, SOCK_STREAM, 0);
 	if(MyInfo->sock == INVALID_SOCKET) err_quit("socket()");
-
 	
 	// connect()
 	SOCKADDR_IN serveraddr;
@@ -255,7 +278,6 @@ DWORD WINAPI ClientMain(LPVOID arg)
 	serveraddr.sin_port = htons(SERVERPORT);
 	retval = connect(MyInfo->sock, (SOCKADDR *)&serveraddr, sizeof(serveraddr));
 	if(retval == SOCKET_ERROR) err_quit("connect()");
-
 	
 	char msg[BUFSIZE] = { 0 };
 	int size;
@@ -359,16 +381,18 @@ DWORD CALLBACK RecvThread(LPVOID _ptr)
 
 		case NICKNAME_EROR:
 			isNickNameOK = false;
-			DisplayText("NickName Set Error %d", rand());
+			DisplayText("NickName Set Error");
 			break;
 
 		case NICKNAME_COMPLETE:
-			DisplayText("NickName Set Complete %d", rand());\
 			isNickNameOK = true;
+			EnableWindow(hName, FALSE); // 이름 에딧 텍스트 비활성화
+			EnableWindow(hNameCheck, FALSE); // 이름 체크 버튼 비활성화
+			DisplayText("NickName Set Complete");
 			break;
 
 		case NICKNAME_LIST:
-			
+			UpdateUserList(MyInfo->recvbuf);
 			break;
 
 		case CHATT_MSG:
@@ -383,6 +407,18 @@ DWORD CALLBACK RecvThread(LPVOID _ptr)
 
 	return 0;
 }
+
+void UpdateUserList(char* _buf)
+{
+	if (_buf == nullptr)
+		return;
+
+	int count = 0;
+	char str[BUFSIZE] = { 0 };
+	UnPackPacket(_buf, str, count);
+
+}
+
 
 PROTOCOL GetProtocol(const char* _ptr)
 {
