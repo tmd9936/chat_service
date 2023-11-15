@@ -183,7 +183,7 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 }
 
 // 편집 컨트롤 출력 함수
-void DisplayText(char *fmt, ...)
+void DisplayText(HWND _hWnd, char *fmt, ...)
 {
 	va_list arg;
 	va_start(arg, fmt);
@@ -191,9 +191,9 @@ void DisplayText(char *fmt, ...)
 	char cbuf[BUFSIZE + 256] = { 0 };
 	vsprintf(cbuf, fmt, arg);
 
-	int nLength = GetWindowTextLength(hLog);
-	SendMessage(hLog, EM_SETSEL, nLength, nLength);
-	SendMessage(hLog, EM_REPLACESEL, FALSE, (LPARAM)cbuf);
+	int nLength = GetWindowTextLength(_hWnd);
+	SendMessage(_hWnd, EM_SETSEL, nLength, nLength);
+	SendMessage(_hWnd, EM_REPLACESEL, FALSE, (LPARAM)cbuf);
 
 	va_end(arg);
 }
@@ -221,7 +221,7 @@ void err_display(const char *msg)
 		NULL, WSAGetLastError(),
 		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
 		(LPTSTR)&lpMsgBuf, 0, NULL);
-	DisplayText("[%s] %s", msg, (char *)lpMsgBuf);
+	DisplayText(hLog, "[%s] %s", msg, (char *)lpMsgBuf);
 	LocalFree(lpMsgBuf);
 }
 
@@ -370,14 +370,14 @@ DWORD CALLBACK RecvThread(LPVOID _ptr)
 
 		case NICKNAME_EROR:
 			isNickNameOK = false;
-			DisplayText("NickName Set Error");
+			DisplayText(hLog, "NickName Set Error");
 			break;
 
 		case NICKNAME_COMPLETE:
 			isNickNameOK = true;
 			EnableWindow(hName, FALSE); // 이름 에딧 텍스트 비활성화
 			EnableWindow(hNameCheck, FALSE); // 이름 체크 버튼 비활성화
-			DisplayText("NickName Set Complete");
+			DisplayText(hLog, "NickName Set Complete");
 			break;
 
 		case NICKNAME_LIST:
@@ -385,15 +385,11 @@ DWORD CALLBACK RecvThread(LPVOID _ptr)
 			break;
 
 		case CHATT_MSG:
+			msg[0] = '\0';
 			UnPackPacket(MyInfo->recvbuf, msg);
-			count = GetWindowTextLength(hLog);
-			SendMessage(hLog, EM_SETSEL, count, count);
-			SendMessage(hLog, EM_REPLACESEL, FALSE, (LPARAM)msg);
+			DisplayText(hChat, "%s\r\n", msg);
 			break;
 		}
-
-
-		DisplayText("%s\r\n", msg);	
 
 	}
 
