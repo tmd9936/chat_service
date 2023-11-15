@@ -153,6 +153,8 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			WaitForSingleObject(hReadEvent, INFINITE); // 읽기 완료 기다리기
 			GetDlgItemText(hDlg, IDC_MESSAGE, buf, BUFSIZE+1);
 			SetEvent(hWriteEvent); // 쓰기 완료 알리기
+			size = PackPacket(buf, PROTOCOL::CHATT_MSG, buf);
+			send(MyInfo->sock, buf, size, 0);
 			SetWindowText(hMessage, "");
 			SetFocus(hMessage);			
 			return TRUE;
@@ -186,7 +188,7 @@ void DisplayText(char *fmt, ...)
 	va_list arg;
 	va_start(arg, fmt);
 
-	char cbuf[BUFSIZE+256];
+	char cbuf[BUFSIZE + 256] = { 0 };
 	vsprintf(cbuf, fmt, arg);
 
 	int nLength = GetWindowTextLength(hLog);
@@ -383,7 +385,10 @@ DWORD CALLBACK RecvThread(LPVOID _ptr)
 			break;
 
 		case CHATT_MSG:
-			
+			UnPackPacket(MyInfo->recvbuf, msg);
+			count = GetWindowTextLength(hLog);
+			SendMessage(hLog, EM_SETSEL, count, count);
+			SendMessage(hLog, EM_REPLACESEL, FALSE, (LPARAM)msg);
 			break;
 		}
 
@@ -410,7 +415,7 @@ void UpdateUserList(char* _buf)
 	{
 		int pos = (int)SendMessage(hUserList, LB_ADDSTRING, 0,
 			(LPARAM)data[i].c_str());
-		//SendMessage(hUserList, LB_SETITEMDATA, pos, (LPARAM)i);
+		SendMessage(hUserList, LB_SETITEMDATA, pos, (LPARAM)i);
 	}
 }
 

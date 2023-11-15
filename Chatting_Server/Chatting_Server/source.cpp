@@ -571,9 +571,25 @@ bool NickNameSetting(_ClientInfo* _clientinfo)
 
 void ChattingMessageProcess(_ClientInfo* _clientinfo)
 {
+	char chatText[BUFSIZE] = { 0 };
+	char message[BUFSIZE] = { 0 };
+	int size = 0;
+
 	EnterCriticalSection(&cs);
 
-	
+	strcpy(message, _clientinfo->nickname);
+	strcat(message, ": ");
+
+	UnPackPacket(_clientinfo->recvbuf, chatText); // Ã¤ÆÃ ³»¿ë È¹µæ
+	strcat(message, chatText);
+
+	for (int i = 0; i < Client_Count; i++)
+	{
+		int size = 0;
+		size = PackPacket(ClientInfo[i]->sendbuf, PROTOCOL::CHATT_MSG, message);
+		send(ClientInfo[i]->sock, ClientInfo[i]->sendbuf, size, 0);
+	}
+
 
 	LeaveCriticalSection(&cs);
 }
@@ -598,7 +614,7 @@ void ChattingOutProcess(_ClientInfo* _clientinfo)
 
 void NickNameUpdate()
 {
-	for (int i = 0; i < Client_Count; i++)
+	for (int i = 0; i < Nick_Count; i++)
 	{
 		int size = 0;
 		size = PackPacket(ClientInfo[i]->sendbuf, PROTOCOL::NICKNAME_LIST, NickNameList, Nick_Count);
