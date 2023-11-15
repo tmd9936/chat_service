@@ -70,6 +70,8 @@ void UnPackPacket(const char*, char*);
 void UnPackPacket(const char*, vector<string>&, int&);
 
 char buf[BUFSIZE+1]; // 데이터 송수신 버퍼
+char chatMessage[BUFSIZE]; // 채팅 메세진
+
 HANDLE hReadEvent, hWriteEvent; // 이벤트
 HANDLE hNameEvent; // 이벤트
 
@@ -151,9 +153,9 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				return TRUE;
 			EnableWindow(hSendButton, FALSE); // 보내기 버튼 비활성화
 			WaitForSingleObject(hReadEvent, INFINITE); // 읽기 완료 기다리기
-			GetDlgItemText(hDlg, IDC_MESSAGE, buf, BUFSIZE+1);
+			GetDlgItemText(hDlg, IDC_MESSAGE, chatMessage, BUFSIZE);
 			SetEvent(hWriteEvent); // 쓰기 완료 알리기
-			size = PackPacket(buf, PROTOCOL::CHATT_MSG, buf);
+			size = PackPacket(buf, PROTOCOL::CHATT_MSG, chatMessage);
 			send(MyInfo->sock, buf, size, 0);
 			SetWindowText(hMessage, "");
 			SetFocus(hMessage);			
@@ -370,14 +372,23 @@ DWORD CALLBACK RecvThread(LPVOID _ptr)
 
 		case NICKNAME_EROR:
 			isNickNameOK = false;
-			DisplayText(hLog, "NickName Set Error");
+			DisplayText(hLog, "NickName Set Error\r\n");
 			break;
 
 		case NICKNAME_COMPLETE:
-			isNickNameOK = true;
-			EnableWindow(hName, FALSE); // 이름 에딧 텍스트 비활성화
-			EnableWindow(hNameCheck, FALSE); // 이름 체크 버튼 비활성화
-			DisplayText(hLog, "NickName Set Complete");
+			if (!isNickNameOK)
+			{
+				isNickNameOK = true;
+				EnableWindow(hName, FALSE); // 이름 에딧 텍스트 비활성화
+				EnableWindow(hNameCheck, FALSE); // 이름 체크 버튼 비활성화
+				DisplayText(hLog, "NickName Set Complete\r\n");
+			}
+			else
+			{
+				memset(msg, 0, BUFSIZE);
+				UnPackPacket(MyInfo->recvbuf, msg);
+				DisplayText(hLog, "%s\r\n", msg);
+			}
 			break;
 
 		case NICKNAME_LIST:
@@ -385,7 +396,7 @@ DWORD CALLBACK RecvThread(LPVOID _ptr)
 			break;
 
 		case CHATT_MSG:
-			msg[0] = '\0';
+			memset(msg, 0, BUFSIZE);
 			UnPackPacket(MyInfo->recvbuf, msg);
 			DisplayText(hChat, "%s\r\n", msg);
 			break;
@@ -401,9 +412,8 @@ void UpdateUserList(char* _buf)
 	if (_buf == nullptr)
 		return;
 
-	int count = 0;
-	//char str[BUFSIZE] = { 0 };
 	vector<string> data;
+	int count = 0;
 	UnPackPacket(_buf, data, count);
 
 	SendMessage(hUserList, LB_RESETCONTENT, 0, 0);

@@ -551,8 +551,8 @@ bool NickNameSetting(_ClientInfo* _clientinfo)
 	if (!NicknameCheck(nName) ) // 이미 존재하는 닉네임인지 확인
 	{
 		LeaveCriticalSection(&cs);
-		size = PackPacket(_clientinfo->sendbuf, PROTOCOL::NICKNAME_EROR, "NickName Set Error");
-		send(_clientinfo->sock, _clientinfo->sendbuf, size, 0);
+		//size = PackPacket(_clientinfo->sendbuf, PROTOCOL::NICKNAME_EROR, "NickName Set Error");
+		//send(_clientinfo->sock, _clientinfo->sendbuf, size, 0);
 		return false;
 	}
 
@@ -561,8 +561,14 @@ bool NickNameSetting(_ClientInfo* _clientinfo)
 	strcpy(_clientinfo->nickname, nName);
 	AddNickName(nName);
 
-	size = PackPacket(_clientinfo->sendbuf, PROTOCOL::NICKNAME_COMPLETE, "NickName Set Complete");
-	send(_clientinfo->sock, _clientinfo->sendbuf, size, 0);
+	char message[BUFSIZE] = { 0 };
+	MakeEnterMessage(nName, message);
+	for (int i = 0; i < Client_Count; i++)
+	{
+		int size = 0;
+		size = PackPacket(ClientInfo[i]->sendbuf, PROTOCOL::NICKNAME_COMPLETE, message);
+		send(ClientInfo[i]->sock, ClientInfo[i]->sendbuf, size, 0);
+	}
 
 	LeaveCriticalSection(&cs);	
 
@@ -575,13 +581,13 @@ void ChattingMessageProcess(_ClientInfo* _clientinfo)
 	char message[BUFSIZE] = { 0 };
 	int size = 0;
 
-	EnterCriticalSection(&cs);
-
 	strcpy(message, _clientinfo->nickname);
 	strcat(message, ": ");
 
 	UnPackPacket(_clientinfo->recvbuf, chatText); // 채팅 내용 획득
 	strcat(message, chatText);
+
+	EnterCriticalSection(&cs);
 
 	for (int i = 0; i < Client_Count; i++)
 	{
