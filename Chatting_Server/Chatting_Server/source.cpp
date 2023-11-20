@@ -1,41 +1,15 @@
 #pragma comment(lib, "ws2_32.lib")
 
-#include <stdio.h>
-#include <string.h>
-#include <winsock2.h>
+#include "Packet_Utility.h"
 
-#define SERVERIP "172.30.1.85"
+#define SERVERIP "127.0.0.1"
 #define SERVERPORT 9000
 
-#define BUFSIZE 4096
-#define NICKNAMESIZE 255
 #define MAXUSER   10
 #define NODATA   -1
 
 #define INTRO_MSG "채팅프로그램입니다. 닉네임을 입력하세요"
 #define NICKNAME_ERROR_MSG "이미있는 닉네임입니다."
-
-
-enum STATE
-{
-	INITE_STATE,
-	INTRO_STATE,
-	CHATT_INITE_STATE,
-	CHATTING_STATE,
-	CONNECT_END_STATE
-};
-
-enum PROTOCOL
-{
-	INTRO,
-	CHATT_NICKNAME,
-	NICKNAME_EROR, 	
-	NICKNAME_COMPLETE,
-	NICKNAME_LIST,	
-	CHATT_MSG,
-	CHATT_OUT,
-
-};
 
 struct _ClientInfo
 {
@@ -70,12 +44,7 @@ void RemoveNickName(const char*);
 
 bool PacketRecv(SOCKET, char*);
 
-int PackPacket(char*, PROTOCOL, const char*); // INTRO, NICKNAME_EROR, CHATT_MSG
-int PackPacket(char*, PROTOCOL, char**, int);//NICKNAME_LIST
-
 PROTOCOL GetProtocol(const char*);
-
-void UnPackPacket(const char*, char*);//CHATT_NICKNAME, CHATT_MSG
 
 bool NickNameSetting(_ClientInfo*);
 void ChattingMessageProcess(_ClientInfo*);
@@ -165,10 +134,10 @@ DWORD CALLBACK ProcessClient(LPVOID  _ptr)
 		switch (Client_ptr->state)
 		{
 		case INITE_STATE:
-			Client_ptr->state = INTRO_STATE;
+			Client_ptr->state = STATE::INTRO_STATE;
 			break;
 		case INTRO_STATE:
-			size = PackPacket(Client_ptr->sendbuf, INTRO, INTRO_MSG);
+			size = Packet_Utility::PackPacket(Client_ptr->sendbuf, INTRO, INTRO_MSG);
 			if (send(Client_ptr->sock, Client_ptr->sendbuf, size, 0) == SOCKET_ERROR)
 			{
 				err_display("intro Send()");
@@ -273,69 +242,6 @@ bool PacketRecv(SOCKET _sock, char* _buf)
 	return true;
 }
 
-int PackPacket(char* _buf, PROTOCOL _protocol, const char* _str1)
-{
-	char* ptr = _buf;	
-	int size = 0;
-	ptr = ptr + sizeof(size);
-
-	memcpy(ptr, &_protocol, sizeof(_protocol));
-	ptr = ptr + sizeof(_protocol);
-	size = size + sizeof(size);
-
-	int strsize1 = strlen(_str1);
-	memcpy(ptr, &strsize1, sizeof(strsize1));
-	ptr = ptr + sizeof(strsize1);
-	size = size + sizeof(strsize1);
-
-	memcpy(ptr, _str1, strsize1);
-	ptr = ptr + strsize1;
-	size = size + strsize1;
-
-	ptr = _buf;
-
-	memcpy(ptr, &size, sizeof(size));
-	size = size + sizeof(size);
-	return size;
-}
-
-int PackPacket(char* _buf, PROTOCOL _protocol, char** _strlist, int _count)
-{
-	char* ptr = _buf;
-	int strsize;
-	int size = 0;
-
-	ptr = ptr + sizeof(size);
-
-	memcpy(ptr, &_protocol, sizeof(_protocol));
-	ptr = ptr + sizeof(_protocol);
-	size = size + sizeof(_protocol);
-
-	memcpy(ptr, &_count, sizeof(_count));
-	ptr = ptr + sizeof(_count);
-	size = size + sizeof(_count);
-
-	for (int i = 0; i < _count; i++)
-	{
-		strsize = strlen(_strlist[i]);
-
-		memcpy(ptr, &strsize, sizeof(strsize));
-		ptr = ptr + sizeof(strsize);
-		size = size + sizeof(strsize);
-
-		memcpy(ptr, _strlist[i], strsize);
-		ptr = ptr + strsize;
-		size = size + strsize;
-	}
-
-	ptr = _buf;
-
-	memcpy(ptr, &size, sizeof(size));
-
-	size = size + sizeof(size);
-
-	return size;
-}
 
 PROTOCOL GetProtocol(const char* _ptr)
 {
@@ -345,18 +251,6 @@ PROTOCOL GetProtocol(const char* _ptr)
 	return protocol;
 }
 
-
-void UnPackPacket(const char* _buf, char* _str)
-{
-	int strsize;
-	const char* ptr = _buf + sizeof(PROTOCOL);
-
-	memcpy(&strsize, ptr, sizeof(strsize));
-	ptr = ptr + sizeof(strsize);
-
-	memcpy(_str, ptr, strsize);
-	ptr = ptr + strsize;
-}
 
 void err_quit(const char *msg)
 {
@@ -541,7 +435,7 @@ bool NickNameSetting(_ClientInfo* _clientinfo)
 	char nName[BUFSIZE] = { 0 };
 	int size = 0;
 	
-	UnPackPacket(_clientinfo->recvbuf, nName); // 닉네임 획득
+	Packet_Utility::UnPackPacket(_clientinfo->recvbuf, nName); // 닉네임 획득
 
 	if (!strcmp(_clientinfo->nickname, nName)) // 현재 닉네임과 곂치는지 확인
 	{
@@ -567,7 +461,7 @@ bool NickNameSetting(_ClientInfo* _clientinfo)
 	for (int i = 0; i < Client_Count; i++)
 	{
 		int size = 0;
-		size = PackPacket(ClientInfo[i]->sendbuf, PROTOCOL::NICKNAME_COMPLETE, message);
+		size = Packet_Utility::PackPacket(ClientInfo[i]->sendbuf, PROTOCOL::NICKNAME_COMPLETE, message);
 		send(ClientInfo[i]->sock, ClientInfo[i]->sendbuf, size, 0);
 	}
 
@@ -587,13 +481,13 @@ void ChattingMessageProcess(_ClientInfo* _clientinfo)
 	strcpy(message, _clientinfo->nickname);
 	strcat(message, ": ");
 
-	UnPackPacket(_clientinfo->recvbuf, chatText); // 채팅 내용 획득
+	Packet_Utility::UnPackPacket(_clientinfo->recvbuf, chatText); // 채팅 내용 획득
 	strcat(message, chatText);
 
 	for (int i = 0; i < Client_Count; i++)
 	{
 		int size = 0;
-		size = PackPacket(ClientInfo[i]->sendbuf, PROTOCOL::CHATT_MSG, message);
+		size = Packet_Utility::PackPacket(ClientInfo[i]->sendbuf, PROTOCOL::CHATT_MSG, message);
 		send(ClientInfo[i]->sock, ClientInfo[i]->sendbuf, size, 0);
 	}
 
@@ -617,7 +511,7 @@ void ChattingOutProcess(_ClientInfo* _clientinfo)
 	char nName[BUFSIZE] = { 0 };
 	int size = 0;
 
-	UnPackPacket(_clientinfo->recvbuf, nName); // 닉네임 획득
+	Packet_Utility::UnPackPacket(_clientinfo->recvbuf, nName); // 닉네임 획득
 
 	char message[BUFSIZE] = { 0 };
 	MakeExitMessage(nName, message);
@@ -625,7 +519,7 @@ void ChattingOutProcess(_ClientInfo* _clientinfo)
 	for (int i = 0; i < Client_Count; i++)
 	{
 		int size = 0;
-		size = PackPacket(ClientInfo[i]->sendbuf, PROTOCOL::CHATT_OUT, message);
+		size = Packet_Utility::PackPacket(ClientInfo[i]->sendbuf, PROTOCOL::CHATT_OUT, message);
 		send(ClientInfo[i]->sock, ClientInfo[i]->sendbuf, size, 0);
 	}
 
@@ -637,7 +531,7 @@ void NickNameUpdate()
 	for (int i = 0; i < Nick_Count; i++)
 	{
 		int size = 0;
-		size = PackPacket(ClientInfo[i]->sendbuf, PROTOCOL::NICKNAME_LIST, NickNameList, Nick_Count);
+		size = Packet_Utility::PackPacket(ClientInfo[i]->sendbuf, PROTOCOL::NICKNAME_LIST, NickNameList, Nick_Count);
 		send(ClientInfo[i]->sock, ClientInfo[i]->sendbuf, size, 0);
 	}
 }

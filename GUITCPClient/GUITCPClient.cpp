@@ -1,38 +1,9 @@
 #pragma comment(lib, "ws2_32")
 #include <winsock2.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <commctrl.h>
-#include <string>
-#include <vector>
 #include "resource.h"
+#include "Packet_Utility.h"
 
 using namespace std;
-
-#define SERVERIP   "172.30.1.85"
-#define SERVERPORT 9000
-#define BUFSIZE 4096
-#define NICKNAMESIZE 255
-
-enum PROTOCOL
-{
-	INTRO,
-	CHATT_NICKNAME,
-	NICKNAME_EROR,
-	NICKNAME_COMPLETE,
-	NICKNAME_LIST,
-	CHATT_MSG,
-	CHATT_OUT,
-
-};
-
-enum STATE
-{
-	INITE_STATE,
-	CHATT_INITE_STATE,
-	CHATTING_STATE,
-	CHATT_OUT_STATE
-};
 
 struct _MyInfo
 {
@@ -42,7 +13,7 @@ struct _MyInfo
 	char recvbuf[BUFSIZE];
 }*MyInfo;
 
-char nickname[1024];
+char nickname[NICKNAMESIZE];
 
 bool PacketRecv(SOCKET, char*);
 
@@ -63,11 +34,6 @@ DWORD CALLBACK RecvThread(LPVOID);
 void UpdateUserList(char*);
 
 PROTOCOL GetProtocol(const char*);
-int PackPacket(char*, PROTOCOL, const char*);
-
-void UnPackPacket(const char*, char*, int&);
-void UnPackPacket(const char*, char*);
-void UnPackPacket(const char*, vector<string>&, int&);
 
 char buf[BUFSIZE+1]; // 데이터 송수신 버퍼
 char chatMessage[BUFSIZE]; // 채팅 메세진
@@ -155,28 +121,28 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			WaitForSingleObject(hReadEvent, INFINITE); // 읽기 완료 기다리기
 			GetDlgItemText(hDlg, IDC_MESSAGE, chatMessage, BUFSIZE);
 			SetEvent(hWriteEvent); // 쓰기 완료 알리기
-			size = PackPacket(buf, PROTOCOL::CHATT_MSG, chatMessage);
+			size = Packet_Utility::PackPacket(buf, PROTOCOL::CHATT_MSG, chatMessage);
 			send(MyInfo->sock, buf, size, 0);
 			SetWindowText(hMessage, "");
 			SetFocus(hMessage);			
 			return TRUE;
 		case IDC_NAMECHECK:
 			WaitForSingleObject(hReadEvent, INFINITE); // 읽기 완료 기다리기
-			GetDlgItemText(hDlg, IDC_NAME, nickname, 1024);
+			GetDlgItemText(hDlg, IDC_NAME, nickname, NICKNAMESIZE);
 			SetEvent(hWriteEvent); // 쓰기 완료 알리기
-			size = PackPacket(buf, PROTOCOL::CHATT_NICKNAME, nickname);
+			size = Packet_Utility::PackPacket(buf, PROTOCOL::CHATT_NICKNAME, nickname);
 			send(MyInfo->sock, buf, size, 0);
 			return TRUE;
 		case IDCANCEL:
 			//채팅 종료 알리기
-			size = PackPacket(buf, PROTOCOL::CHATT_OUT, nickname);
+			size = Packet_Utility::PackPacket(buf, PROTOCOL::CHATT_OUT, nickname);
 			send(MyInfo->sock, buf, size, 0);
 			EndDialog(hDlg, IDCANCEL);
 			return TRUE;
 		}
 		return FALSE;
 	case WM_CLOSE:
-		size = PackPacket(buf, PROTOCOL::CHATT_OUT, nickname);
+		size = Packet_Utility::PackPacket(buf, PROTOCOL::CHATT_OUT, nickname);
 		send(MyInfo->sock, buf, size, 0);
 		PostQuitMessage(0);
 		return TRUE;
@@ -386,7 +352,7 @@ DWORD CALLBACK RecvThread(LPVOID _ptr)
 			else
 			{
 				memset(msg, 0, BUFSIZE);
-				UnPackPacket(MyInfo->recvbuf, msg);
+				Packet_Utility::UnPackPacket(MyInfo->recvbuf, msg);
 				DisplayText(hLog, "%s\r\n", msg);
 			}
 			break;
@@ -397,13 +363,13 @@ DWORD CALLBACK RecvThread(LPVOID _ptr)
 
 		case CHATT_MSG:
 			memset(msg, 0, BUFSIZE);
-			UnPackPacket(MyInfo->recvbuf, msg);
+			Packet_Utility::UnPackPacket(MyInfo->recvbuf, msg);
 			DisplayText(hChat, "%s\r\n", msg);
 			break;
 
 		case CHATT_OUT:
 			memset(msg, 0, BUFSIZE);
-			UnPackPacket(MyInfo->recvbuf, msg);
+			Packet_Utility::UnPackPacket(MyInfo->recvbuf, msg);
 			DisplayText(hLog, "%s\r\n", msg);
 			break;
 		}
@@ -420,7 +386,7 @@ void UpdateUserList(char* _buf)
 
 	vector<string> data;
 	int count = 0;
-	UnPackPacket(_buf, data, count);
+	Packet_Utility::UnPackPacket(_buf, data, count);
 
 	SendMessage(hUserList, LB_RESETCONTENT, 0, 0);
 	for (int i = 0; i < count; i++)
@@ -438,91 +404,4 @@ PROTOCOL GetProtocol(const char* _ptr)
 	memcpy(&protocol, _ptr, sizeof(PROTOCOL));
 
 	return protocol;
-}
-
-int PackPacket(char* _buf, PROTOCOL _protocol, const char* _str1)
-{
-	char* ptr = _buf;
-	int size = 0;
-	ptr = ptr + sizeof(size);
-
-	memcpy(ptr, &_protocol, sizeof(_protocol));
-	ptr = ptr + sizeof(_protocol);
-	size = size + sizeof(size);
-
-	int strsize1 = strlen(_str1);
-	memcpy(ptr, &strsize1, sizeof(strsize1));
-	ptr = ptr + sizeof(strsize1);
-	size = size + sizeof(strsize1);
-
-	memcpy(ptr, _str1, strsize1);
-	ptr = ptr + strsize1;
-	size = size + strsize1;
-
-	ptr = _buf;
-
-	memcpy(ptr, &size, sizeof(size));
-	size = size + sizeof(size);
-	return size;
-}
-
-
-void UnPackPacket(const char* _buf, char* _str)
-{
-	int strsize;
-	const char* ptr = _buf + sizeof(PROTOCOL);
-
-	memcpy(&strsize, ptr, sizeof(strsize));
-	ptr = ptr + sizeof(strsize);
-
-	memcpy(_str, ptr, strsize);
-	ptr = ptr + strsize;
-}
-
-
-void UnPackPacket(const char* _buf, char* _str, int& _count)
-{	
-	const char* ptr = _buf + sizeof(PROTOCOL);
-
-	memcpy(&_count, ptr, sizeof(_count));
-	ptr = ptr + sizeof(_count);
-
-	for (int i = 0; i < _count; i++)
-	{
-		int strsize;
-		memcpy(&strsize, ptr, sizeof(strsize));
-		ptr = ptr + sizeof(strsize);
-
-		memcpy(_str, ptr, strsize);
-		ptr = ptr + strsize;
-		_str = _str + strsize;
-		strcat(_str, ",");
-		_str++;
-	}
-
-}
-
-void UnPackPacket(const char* _buf, vector<string>& vec, int& _count)
-{
-	const char* ptr = _buf + sizeof(PROTOCOL);
-
-	memcpy(&_count, ptr, sizeof(_count));
-	ptr = ptr + sizeof(_count);
-
-	vec.reserve(_count);
-
-	char _str[BUFSIZE] = { 0 };
-	for (int i = 0; i < _count; i++)
-	{
-		int strsize;
-		memcpy(&strsize, ptr, sizeof(strsize));
-		ptr = ptr + sizeof(strsize);
-
-		memcpy(_str, ptr, strsize);
-		ptr = ptr + strsize;
-		string name = _str;
-
-		vec.push_back(move(_str));
-	}
-
 }
