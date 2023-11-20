@@ -122,6 +122,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Shared\Public\Define.h" />
+    <ClInclude Include="..\..\Shared\Public\Enum.h" />
+    <ClInclude Include="..\..\Shared\Public\Function.h" />
     <ClInclude Include="..\..\Shared\Public\Packet_Utility.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

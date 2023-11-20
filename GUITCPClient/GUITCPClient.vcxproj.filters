@@ -18,18 +18,9 @@
     <ClCompile Include="GUITCPClient.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="..\Shared\Private\Packet_Utility.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Shared\Public\Define.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Shared\Public\Packet_Utility.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>

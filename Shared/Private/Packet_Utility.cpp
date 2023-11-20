@@ -1,6 +1,5 @@
 #include "Packet_Utility.h"
 
-
 void Packet_Utility::UnPackPacket(const char* _buf, char* _str)
 {
 	int strsize;

@@ -1,7 +1,7 @@
 #pragma comment(lib, "ws2_32")
-#include <winsock2.h>
 #include "resource.h"
 #include "Packet_Utility.h"
+#include "Function.h"
 
 using namespace std;
 
@@ -15,25 +15,17 @@ struct _MyInfo
 
 char nickname[NICKNAMESIZE];
 
-bool PacketRecv(SOCKET, char*);
-
 // 대화상자 프로시저
 BOOL CALLBACK DlgProc(HWND, UINT, WPARAM, LPARAM);
 
 // 편집 컨트롤 출력 함수
 void DisplayText(char *fmt, ...);
-// 오류 출력 함수
-void err_quit(const char*);
-void err_display(const char*);
-// 사용자 정의 데이터 수신 함수
-int recvn(SOCKET , char*, int, int);
+
 // 소켓 통신 스레드 함수
 DWORD WINAPI ClientMain(LPVOID);
 DWORD CALLBACK RecvThread(LPVOID);
 
 void UpdateUserList(char*);
-
-PROTOCOL GetProtocol(const char*);
 
 char buf[BUFSIZE+1]; // 데이터 송수신 버퍼
 char chatMessage[BUFSIZE]; // 채팅 메세진
@@ -81,8 +73,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	CloseHandle(hClientMain);
 	CloseHandle(hRecvThread);
 
-	//CloseHandle(hName);
-	//CloseHandle(hNameCheck);
+	CloseHandle(hName);
+	CloseHandle(hNameCheck);
 
 	// closesocket()
 	closesocket(MyInfo->sock);
@@ -166,53 +158,6 @@ void DisplayText(HWND _hWnd, char *fmt, ...)
 	va_end(arg);
 }
 
-// 소켓 함수 오류 출력 후 종료
-void err_quit(const char *msg)
-{
-	LPVOID lpMsgBuf;
-	FormatMessage(
-		FORMAT_MESSAGE_ALLOCATE_BUFFER|FORMAT_MESSAGE_FROM_SYSTEM,
-		NULL, WSAGetLastError(),
-		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-		(LPTSTR)&lpMsgBuf, 0, NULL);
-	MessageBox(hLog, (LPCTSTR)lpMsgBuf, msg, MB_ICONERROR);
-	LocalFree(lpMsgBuf);
-	exit(1);
-}
-
-// 소켓 함수 오류 출력
-void err_display(const char *msg)
-{
-	LPVOID lpMsgBuf;
-	FormatMessage(
-		FORMAT_MESSAGE_ALLOCATE_BUFFER|FORMAT_MESSAGE_FROM_SYSTEM,
-		NULL, WSAGetLastError(),
-		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-		(LPTSTR)&lpMsgBuf, 0, NULL);
-	DisplayText(hLog, "[%s] %s", msg, (char *)lpMsgBuf);
-	LocalFree(lpMsgBuf);
-}
-
-// 사용자 정의 데이터 수신 함수
-int recvn(SOCKET s, char *buf, int len, int flags)
-{
-	int received;
-	char *ptr = buf;
-	int left = len;
-
-	while(left > 0){
-		received = recv(s, ptr, left, flags);
-		if(received == SOCKET_ERROR)
-			return SOCKET_ERROR;
-		else if(received == 0)
-			break;
-		left -= received;
-		ptr += received;
-	}
-
-	return (len - left);
-}
-
 // TCP 클라이언트 시작 부분
 DWORD WINAPI ClientMain(LPVOID arg)
 {
@@ -282,36 +227,6 @@ DWORD WINAPI ClientMain(LPVOID arg)
 	return 0;
 }
 
-bool PacketRecv(SOCKET _sock, char* _buf)
-{
-	int size;
-
-	int retval = recvn(_sock, (char*)&size, sizeof(size), 0);
-	if (retval == SOCKET_ERROR)
-	{
-		err_display("recv error()");
-		return false;
-	}
-	else if (retval == 0)
-	{
-		return false;
-	}
-
-	retval = recvn(_sock, _buf, size, 0);
-	if (retval == SOCKET_ERROR)
-	{
-		err_display("recv error()");
-		return false;
-
-	}
-	else if (retval == 0)
-	{
-		return false;
-	}
-
-	return true;
-}
-
 DWORD CALLBACK RecvThread(LPVOID _ptr)
 {
 	PROTOCOL protocol{};
@@ -322,7 +237,7 @@ DWORD CALLBACK RecvThread(LPVOID _ptr)
 
 	while (1)
 	{
-		if (!PacketRecv(MyInfo->sock, MyInfo->recvbuf))
+		if (!Packet_Utility::PacketRecv(MyInfo->sock, MyInfo->recvbuf))
 		{
 			err_display("recv error()");
 			return -1;
@@ -395,13 +310,4 @@ void UpdateUserList(char* _buf)
 			(LPARAM)data[i].c_str());
 		SendMessage(hUserList, LB_SETITEMDATA, pos, (LPARAM)i);
 	}
-}
-
-
-PROTOCOL GetProtocol(const char* _ptr)
-{
-	PROTOCOL protocol;
-	memcpy(&protocol, _ptr, sizeof(PROTOCOL));
-
-	return protocol;
 }

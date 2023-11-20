@@ -78,12 +78,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\Shared\Private\Packet_Utility.cpp" />
     <ClCompile Include="GUITCPClient.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\Shared\Public\Define.h" />
-    <ClInclude Include="..\Shared\Public\Packet_Utility.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
