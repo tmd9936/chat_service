@@ -103,9 +103,9 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		switch(LOWORD(wParam)){
 		case IDOK:
 			EnableWindow(hSendButton, FALSE); // 보내기 버튼 비활성화
-			//WaitForSingleObject(hReadEvent, INFINITE); // 읽기 완료 기다리기
+			WaitForSingleObject(hReadEvent, INFINITE); // 읽기 완료 기다리기
 			GetDlgItemText(hDlg, IDC_MESSAGE, chatMessage, BUFSIZE);
-			//SetEvent(hWriteEvent); // 쓰기 완료 알리기
+			SetEvent(hWriteEvent); // 쓰기 완료 알리기
 			size = Packet_Utility::PackPacket(buf, PROTOCOL::CHATT_MSG, chatMessage);
 			send(MyInfo->sock, buf, size, 0);
 			SetWindowText(hMessage, "");
@@ -120,9 +120,9 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			serveraddr.sin_port = htons(SERVERPORT);
 			retval = connect(MyInfo->sock, (SOCKADDR*)&serveraddr, sizeof(serveraddr));
 			if (retval == SOCKET_ERROR) Function::err_quit("connect()");
-			//(hReadEvent, INFINITE); // 읽기 완료 기다리기
+			WaitForSingleObject(hReadEvent, INFINITE); // 읽기 완료 기다리기
 			GetDlgItemText(hDlg, IDC_NAME, nickname, NICKNAMESIZE);
-			//SetEvent(hWriteEvent); // 쓰기 완료 알리기
+			SetEvent(hWriteEvent); // 쓰기 완료 알리기
 			size = Packet_Utility::PackPacket(buf, PROTOCOL::CHATT_NICKNAME, nickname);
 			send(MyInfo->sock, buf, size, 0);
 			MyInfo->state = CHATTING_STATE;
@@ -220,11 +220,8 @@ DWORD CALLBACK RecvThread(LPVOID _ptr)
 {
 	PROTOCOL protocol{};
 	int size = 0;	
-	char nickname[NICKNAMESIZE] = { 0 };
 	char msg[BUFSIZE] = { 0 };
 	int count = 0;	
-
-	int a = 0;
 
 	while (1)
 	{
@@ -242,7 +239,6 @@ DWORD CALLBACK RecvThread(LPVOID _ptr)
 		switch (protocol)
 		{
 		case INTRO:
-			a = 0;
 			break;
 
 		case NICKNAME_EROR:
