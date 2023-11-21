@@ -32,14 +32,14 @@ private:
 	void NickNameUpdate();
 
 private:
+	unordered_map<int, ClientInfo*> clients;
+
+private:
 	WSADATA wsa = {};
 	SOCKET listen_sock = {};
 	SOCKADDR_IN serveraddr = {};
 
 private:
 	CRITICAL_SECTION cs;
-
-private:
-	unordered_map<ClientID, ClientInfo*> clients;
 };
 

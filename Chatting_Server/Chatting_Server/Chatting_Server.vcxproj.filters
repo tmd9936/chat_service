@@ -24,20 +24,23 @@
     <ClCompile Include="source.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="Private\Server_Manager.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Shared\Private\Packet_Utility.cpp">
       <Filter>소스 파일\Shared</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Shared\Private\Function.cpp">
       <Filter>소스 파일\Shared</Filter>
     </ClCompile>
+    <ClCompile Include="Private\ClientInfo.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Private\Server_Manager.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Private\ServerManager.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Public\Server_Manager.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Shared\Public\Packet_Utility.h">
       <Filter>헤더 파일\Shared</Filter>
     </ClInclude>
@@ -52,6 +55,15 @@
     </ClInclude>
     <ClInclude Include="..\..\Shared\Public\NoCopyObject.h">
       <Filter>헤더 파일\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="Public\ClientInfo.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Public\Server_Manager.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Public\ServerManager.h">
+      <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -2,7 +2,7 @@
 #include "Packet_Utility.h"
 #include "Function.h"
 
-DWORD CALLBACK ProcessClient(LPVOID  _ptr)
+DWORD CALLBACK ProcessClientT(LPVOID  _ptr)
 {
 	if (_ptr == nullptr)
 		return 0;
@@ -29,7 +29,7 @@ DWORD CALLBACK ProcessClient(LPVOID  _ptr)
 			//	Client_ptr->state = CONNECT_END_STATE;
 			//	break;
 			//}
-			//Client_ptr->state = CHATT_INITE_STATE;
+			Client_ptr->SetState(CHATT_INITE_STATE);
 			break;
 		case CHATT_INITE_STATE:
 			if (!Client_ptr->PacketRecv())
@@ -162,7 +162,7 @@ void ServerManager::User_Update()
 
 		ClientInfo* ptr = AddClient(sock, clientaddr);
 
-		HANDLE hThread = CreateThread(NULL, 0, ProcessClient, ptr, 0, nullptr);
+		HANDLE hThread = CreateThread(NULL, 0, ProcessClientT, ptr, 0, nullptr);
 		ptr->SetHandle(hThread);
 	}
 }
@@ -175,11 +175,10 @@ ClientInfo* ServerManager::AddClient(SOCKET sock, SOCKADDR_IN clientaddr)
 	ClientInfo* ptr = new ClientInfo;
 	ptr->SetSock(sock);
 	ptr->SetClientAddr(clientaddr);
-	//memcpy(&(ptr->clientaddr), &clientaddr, sizeof(clientaddr));
 
 	while (1)
 	{
-		ClientID cID = rand() % CLIENT_ID_MAX;
+		int cID = rand() % CLIENT_ID_MAX;
 		
 		EnterCriticalSection(&cs);
 		if (clients.find(cID) != clients.end())
@@ -252,7 +251,7 @@ void ServerManager::ChattingMessageProcess(ClientInfo* _clientinfo)
 	char message[BUFSIZE] = { 0 };
 	int size = 0;
 
-	_clientinfo->GetNickName(message);
+	_clientinfo->CatNickName(message);
 	strcat(message, ": ");
 
 	EnterCriticalSection(&cs);
@@ -271,7 +270,7 @@ void ServerManager::RemoveClient(ClientInfo* ptr)
 {
 	ptr->CloseSocket();
 
-	ClientID cID = ptr->GetClientID();
+	int cID = ptr->GetClientID();
 	if (ptr)
 	{
 		delete ptr;
@@ -299,12 +298,13 @@ bool ServerManager::NickNameCheck(const char* _nick)
 
 void ServerManager::NickNameUpdate()
 {
-	char* NickNameList[MAXUSER];
+	char* NickNameList[MAXUSER] = {};
 
-	int i = 0;
+	int len = 0;
 	for (auto iter = clients.begin(); iter != clients.end(); ++iter)
 	{
-		iter->second->GetNickName(NickNameList[i++]);
+		NickNameList[len] = new char[NICKNAMESIZE];
+		iter->second->GetNickName(NickNameList[len++]);
 	}
 
 	for (auto iter = clients.begin(); iter != clients.end(); ++iter)
@@ -312,4 +312,8 @@ void ServerManager::NickNameUpdate()
 		iter->second->SendMessageToClient(NICKNAME_LIST, NickNameList, clients.size());
 	}
 
+	for (int i = 0; i < len; ++i)
+	{
+		delete[] NickNameList[i];
+	}
 }

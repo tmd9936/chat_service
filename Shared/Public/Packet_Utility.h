@@ -4,8 +4,6 @@
 #include "Enum.h"
 #include "NoCopyObject.h"
 
-using namespace std;
-
 class Packet_Utility : public NoCopyObject
 {
 public:

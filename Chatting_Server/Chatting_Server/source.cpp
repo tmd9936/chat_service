@@ -3,6 +3,8 @@
 #include "Packet_Utility.h"
 #include "Function.h"
 #include "Server_Manager.h"
+#include "ServerManager.h"
+
 #include <time.h>
 
 
@@ -11,13 +13,13 @@ int main(int argc, char **argv)
 	srand((unsigned int)(time(nullptr)));
 
 	bool isRun = true;
-	isRun = Server_Manager::GetInstance().Initialize();
+	isRun = ServerManager::GetInstance().Initialize();
 
 	if (isRun)
 	{
-		Server_Manager::GetInstance().User_Update();
+		ServerManager::GetInstance().User_Update();
 
-		Server_Manager::GetInstance().Destroy();
+		ServerManager::GetInstance().Destroy();
 	}
 
 	return 0;

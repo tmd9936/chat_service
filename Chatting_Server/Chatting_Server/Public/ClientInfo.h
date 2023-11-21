@@ -23,7 +23,7 @@ public:
 	int		SendMessageToClient(PROTOCOL _protocol, char** _strlist, int _count);
 
 public:
-	ClientID GetClientID() const {
+	int GetClientID() const {
 		return clientID;
 	}
 
@@ -37,12 +37,18 @@ public:
 		strcpy(buf, nickname);
 	}
 
+	void CatNickName(char* buf) const {
+		if (buf == nullptr)
+			return;
+		strcat(buf, nickname);
+	}
+
 	HANDLE GetHandle() const {
 		return handle;
 	}
 
 public:
-	void SetClientID(ClientID _clientID) {
+	void SetClientID(int _clientID) {
 		clientID = _clientID;
 	}
 
@@ -51,7 +57,8 @@ public:
 	}
 
 	void SetClientAddr(const SOCKADDR_IN& _addr) {
-		clientaddr = _addr;
+		//clientaddr = _addr;
+		memcpy(&(clientaddr), &_addr, sizeof(_addr));
 	}
 
 	void SetHandle(HANDLE _handle) {
@@ -69,7 +76,7 @@ public:
 	}
 
 private:
-	ClientID clientID = { 0 };
+	int clientID = { 0 };
 	SOCKET	sock;
 	SOCKADDR_IN clientaddr;
 	STATE	state = { INITE_STATE };

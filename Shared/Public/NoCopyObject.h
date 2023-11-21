@@ -3,8 +3,8 @@
 class NoCopyObject
 {
 protected:
-	NoCopyObject() {};
-	~NoCopyObject() {};
-	NoCopyObject(const NoCopyObject& rhs) {};
-	NoCopyObject* operator=(const NoCopyObject& ref) {};
+	NoCopyObject() {}
+	~NoCopyObject() {}
+	NoCopyObject(const NoCopyObject& rhs) {}
+	NoCopyObject* operator=(const NoCopyObject& ref) {}
 };
