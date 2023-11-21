@@ -361,12 +361,3 @@ void Server_Manager::NickNameUpdate()
 		send(ClientInfo[i]->sock, ClientInfo[i]->sendbuf, size, 0);
 	}
 }
-
-bool Server_Manager::SearchEmptyHandle(int& output)
-{
-	EnterCriticalSection(&cs);
-
-
-	LeaveCriticalSection(&cs);
-	return true;
-}

@@ -44,9 +44,6 @@ public:
 	void NickNameUpdate();
 
 private:
-	bool SearchEmptyHandle(int& output);
-
-private:
 	WSADATA wsa = {};
 	SOCKET listen_sock = {};
 	SOCKADDR_IN serveraddr = {};
