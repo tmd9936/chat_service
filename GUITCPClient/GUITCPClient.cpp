@@ -73,8 +73,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	CloseHandle(hClientMain);
 	CloseHandle(hRecvThread);
 
-	CloseHandle(hName);
-	CloseHandle(hNameCheck);
+	//CloseHandle(hName);
+	//CloseHandle(hNameCheck);
 
 	// closesocket()
 	closesocket(MyInfo->sock);
@@ -170,7 +170,7 @@ DWORD WINAPI ClientMain(LPVOID arg)
 
 	// socket()
 	MyInfo->sock = socket(AF_INET, SOCK_STREAM, 0);
-	if(MyInfo->sock == INVALID_SOCKET) err_quit("socket()");
+	if(MyInfo->sock == INVALID_SOCKET) Function::err_quit("socket()");
 	
 	// connect()
 	SOCKADDR_IN serveraddr;
@@ -179,7 +179,7 @@ DWORD WINAPI ClientMain(LPVOID arg)
 	serveraddr.sin_addr.s_addr = inet_addr(SERVERIP);
 	serveraddr.sin_port = htons(SERVERPORT);
 	retval = connect(MyInfo->sock, (SOCKADDR *)&serveraddr, sizeof(serveraddr));
-	if(retval == SOCKET_ERROR) err_quit("connect()");
+	if(retval == SOCKET_ERROR) Function::err_quit("connect()");
 	
 	char msg[BUFSIZE] = { 0 };
 	int size;
@@ -237,13 +237,13 @@ DWORD CALLBACK RecvThread(LPVOID _ptr)
 
 	while (1)
 	{
-		if (!Packet_Utility::PacketRecv(MyInfo->sock, MyInfo->recvbuf))
+		if (!Function::PacketRecv(MyInfo->sock, MyInfo->recvbuf))
 		{
-			err_display("recv error()");
+			Function::err_display("recv error()");
 			return -1;
 		}
 
-		protocol=GetProtocol(MyInfo->recvbuf);
+		protocol= Function::GetProtocol(MyInfo->recvbuf);
 
 		switch (protocol)
 		{

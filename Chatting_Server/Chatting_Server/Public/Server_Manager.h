@@ -54,7 +54,8 @@ private:
 
 private:
 	CRITICAL_SECTION cs;
-	HANDLE handles[MAXUSER];
+	HANDLE Handles[MAXUSER];
+	int Handle_Count = { 0 };
 
 private:
 	_ClientInfo* ClientInfo[MAXUSER];
