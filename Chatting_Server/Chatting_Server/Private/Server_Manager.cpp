@@ -199,6 +199,7 @@ void Server_Manager::RemoveClient(_ClientInfo* ptr)
 	}
 
 	Client_Count--;
+	Handle_Count--;
 
 	NickNameUpdate();
 	LeaveCriticalSection(&cs);
@@ -270,13 +271,12 @@ bool Server_Manager::NickNameSetting(_ClientInfo* _clientinfo)
 
 	Packet_Utility::UnPackPacket(_clientinfo->recvbuf, nName); // 닉네임 획득
 
-	EnterCriticalSection(&cs);
 	if (!strcmp(_clientinfo->nickname, nName)) // 현재 닉네임과 곂치는지 확인
 	{
-		LeaveCriticalSection(&cs);
 		return false;
 	}
 
+	EnterCriticalSection(&cs);
 	if (!NicknameCheck(nName))
 	{
 		LeaveCriticalSection(&cs);
@@ -316,9 +316,9 @@ void Server_Manager::ChattingOutProcess(_ClientInfo* _clientinfo)
 	char nName[BUFSIZE] = { 0 };
 	int size = 0;
 
-	EnterCriticalSection(&cs);
 	Packet_Utility::UnPackPacket(_clientinfo->recvbuf, nName); // 닉네임 획득
 
+	EnterCriticalSection(&cs);
 	for (int i = 0; i < Client_Count; i++)
 	{
 		int size = 0;
@@ -331,7 +331,6 @@ void Server_Manager::ChattingOutProcess(_ClientInfo* _clientinfo)
 
 void Server_Manager::ChattingMessageProcess(_ClientInfo* _clientinfo)
 {
-
 	char chatText[BUFSIZE] = { 0 };
 	char message[BUFSIZE] = { 0 };
 	int size = 0;
@@ -361,4 +360,13 @@ void Server_Manager::NickNameUpdate()
 		size = Packet_Utility::PackPacket(ClientInfo[i]->sendbuf, PROTOCOL::NICKNAME_LIST, NickNameList, Nick_Count);
 		send(ClientInfo[i]->sock, ClientInfo[i]->sendbuf, size, 0);
 	}
+}
+
+bool Server_Manager::SearchEmptyHandle(int& output)
+{
+	EnterCriticalSection(&cs);
+
+
+	LeaveCriticalSection(&cs);
+	return true;
 }

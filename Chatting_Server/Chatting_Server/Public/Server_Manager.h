@@ -44,6 +44,9 @@ public:
 	void NickNameUpdate();
 
 private:
+	bool SearchEmptyHandle(int& output);
+
+private:
 	WSADATA wsa = {};
 	SOCKET listen_sock = {};
 	SOCKADDR_IN serveraddr = {};
@@ -54,7 +57,7 @@ private:
 
 private:
 	CRITICAL_SECTION cs;
-	HANDLE Handles[MAXUSER];
+	HANDLE Handles[MAXUSER] = {nullptr};
 	int Handle_Count = { 0 };
 
 private:

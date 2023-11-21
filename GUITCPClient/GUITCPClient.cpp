@@ -42,8 +42,6 @@ HWND hChat; // 채팅 화면 컨트롤
 
 HANDLE hClientMain, hRecvThread;
 
-bool isNickNameOK = false;
-
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                    LPSTR lpCmdLine, int nCmdShow)
 {
@@ -63,18 +61,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
 	DialogBox(hInstance, MAKEINTRESOURCE(IDD_DIALOG1), NULL, DlgProc);
 
-	WaitForSingleObject(hClientMain, 1000);
+	WaitForSingleObject(hClientMain, INFINITE);
 
 	// 이벤트 제거
 	CloseHandle(hWriteEvent);
 	CloseHandle(hReadEvent);
-	//CloseHandle(hNameEvent);
 
 	CloseHandle(hClientMain);
 	CloseHandle(hRecvThread);
-
-	//CloseHandle(hName);
-	//CloseHandle(hNameCheck);
 
 	// closesocket()
 	closesocket(MyInfo->sock);
@@ -88,6 +82,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 BOOL CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	int size = 0;
+	int retval = 0;
 	switch(uMsg){
 	case WM_INITDIALOG:
 		hMessage = GetDlgItem(hDlg, IDC_MESSAGE);
@@ -102,41 +97,49 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		hSendButton = GetDlgItem(hDlg, IDOK);
 		SendMessage(hMessage, EM_SETLIMITTEXT, BUFSIZE, 0);	
 		hRecvThread = CreateThread(NULL, 0, RecvThread, NULL, 0, NULL);
-		MyInfo->state = INITE_STATE;
+		MyInfo->state = CHATT_INITE_STATE;
 		return TRUE;
 	case WM_COMMAND:
 		switch(LOWORD(wParam)){
 		case IDOK:
-			if (!isNickNameOK)
-				return TRUE;
 			EnableWindow(hSendButton, FALSE); // 보내기 버튼 비활성화
-			WaitForSingleObject(hReadEvent, INFINITE); // 읽기 완료 기다리기
+			//WaitForSingleObject(hReadEvent, INFINITE); // 읽기 완료 기다리기
 			GetDlgItemText(hDlg, IDC_MESSAGE, chatMessage, BUFSIZE);
-			SetEvent(hWriteEvent); // 쓰기 완료 알리기
+			//SetEvent(hWriteEvent); // 쓰기 완료 알리기
 			size = Packet_Utility::PackPacket(buf, PROTOCOL::CHATT_MSG, chatMessage);
 			send(MyInfo->sock, buf, size, 0);
 			SetWindowText(hMessage, "");
 			SetFocus(hMessage);			
 			return TRUE;
 		case IDC_NAMECHECK:
-			WaitForSingleObject(hReadEvent, INFINITE); // 읽기 완료 기다리기
+			// connect()
+			SOCKADDR_IN serveraddr;
+			ZeroMemory(&serveraddr, sizeof(serveraddr));
+			serveraddr.sin_family = AF_INET;
+			serveraddr.sin_addr.s_addr = inet_addr(SERVERIP);
+			serveraddr.sin_port = htons(SERVERPORT);
+			retval = connect(MyInfo->sock, (SOCKADDR*)&serveraddr, sizeof(serveraddr));
+			if (retval == SOCKET_ERROR) Function::err_quit("connect()");
+			//(hReadEvent, INFINITE); // 읽기 완료 기다리기
 			GetDlgItemText(hDlg, IDC_NAME, nickname, NICKNAMESIZE);
-			SetEvent(hWriteEvent); // 쓰기 완료 알리기
+			//SetEvent(hWriteEvent); // 쓰기 완료 알리기
 			size = Packet_Utility::PackPacket(buf, PROTOCOL::CHATT_NICKNAME, nickname);
 			send(MyInfo->sock, buf, size, 0);
+			MyInfo->state = CHATTING_STATE;
 			return TRUE;
 		case IDCANCEL:
 			//채팅 종료 알리기
 			size = Packet_Utility::PackPacket(buf, PROTOCOL::CHATT_OUT, nickname);
 			send(MyInfo->sock, buf, size, 0);
 			EndDialog(hDlg, IDCANCEL);
+			MyInfo->state = CHATT_OUT_STATE;
 			return TRUE;
 		}
 		return FALSE;
 	case WM_CLOSE:
 		size = Packet_Utility::PackPacket(buf, PROTOCOL::CHATT_OUT, nickname);
 		send(MyInfo->sock, buf, size, 0);
-		PostQuitMessage(0);
+		MyInfo->state = CHATT_OUT_STATE;
 		return TRUE;
 	}
 	return FALSE;
@@ -161,8 +164,6 @@ void DisplayText(HWND _hWnd, char *fmt, ...)
 // TCP 클라이언트 시작 부분
 DWORD WINAPI ClientMain(LPVOID arg)
 {
-	int retval;
-
 	// 윈속 초기화
 	WSADATA wsa;
 	if(WSAStartup(MAKEWORD(2,2), &wsa) != 0)
@@ -172,14 +173,6 @@ DWORD WINAPI ClientMain(LPVOID arg)
 	MyInfo->sock = socket(AF_INET, SOCK_STREAM, 0);
 	if(MyInfo->sock == INVALID_SOCKET) Function::err_quit("socket()");
 	
-	// connect()
-	SOCKADDR_IN serveraddr;
-	ZeroMemory(&serveraddr, sizeof(serveraddr));
-	serveraddr.sin_family = AF_INET;
-	serveraddr.sin_addr.s_addr = inet_addr(SERVERIP);
-	serveraddr.sin_port = htons(SERVERPORT);
-	retval = connect(MyInfo->sock, (SOCKADDR *)&serveraddr, sizeof(serveraddr));
-	if(retval == SOCKET_ERROR) Function::err_quit("connect()");
 	
 	char msg[BUFSIZE] = { 0 };
 	int size;
@@ -187,32 +180,28 @@ DWORD WINAPI ClientMain(LPVOID arg)
 	bool endflag = false;
 
 	while(1)
-	{		
-		WaitForSingleObject(hWriteEvent, INFINITE); // 쓰기 완료 기다리기
+	{	
+		WaitForSingleObject(hWriteEvent, 1000); // 쓰기 완료 기다리기
 
 		// 문자열 길이가 0이면 보내지 않음
-		if(MyInfo->state!= CHATT_OUT_STATE && strlen(buf) == 0)
+		if(MyInfo->state != CHATT_OUT_STATE && strlen(buf) == 0)
 		{
-			EnableWindow(hSendButton, TRUE); // 보내기 버튼 활성화
+			EnableWindow(hSendButton, FALSE); // 보내기 버튼 활성화
 			SetEvent(hReadEvent); // 읽기 완료 알리기
 			continue;
 		}
 
 		switch (MyInfo->state)
-		{			
-		case CHATT_INITE_STATE:			
-			
-			
+		{
+		case CHATT_INITE_STATE:
 			break;
+
 		case CHATTING_STATE:			
-			
 			break;
 
 		case CHATT_OUT_STATE:			
-			
 			endflag = true;
 			break;
-
 		}
 		
 		EnableWindow(hSendButton, TRUE); // 보내기 버튼 활성화
@@ -235,8 +224,13 @@ DWORD CALLBACK RecvThread(LPVOID _ptr)
 	char msg[BUFSIZE] = { 0 };
 	int count = 0;	
 
+	int a = 0;
+
 	while (1)
 	{
+		if (MyInfo->state == CHATT_INITE_STATE)
+			continue;
+
 		if (!Function::PacketRecv(MyInfo->sock, MyInfo->recvbuf))
 		{
 			Function::err_display("recv error()");
@@ -248,28 +242,17 @@ DWORD CALLBACK RecvThread(LPVOID _ptr)
 		switch (protocol)
 		{
 		case INTRO:
-			
+			a = 0;
 			break;
 
 		case NICKNAME_EROR:
-			isNickNameOK = false;
 			DisplayText(hLog, "NickName Set Error\r\n");
 			break;
 
 		case NICKNAME_COMPLETE:
-			if (!isNickNameOK)
-			{
-				isNickNameOK = true;
-				EnableWindow(hName, FALSE); // 이름 에딧 텍스트 비활성화
-				EnableWindow(hNameCheck, FALSE); // 이름 체크 버튼 비활성화
-				DisplayText(hLog, "NickName Set Complete\r\n");
-			}
-			else
-			{
-				memset(msg, 0, BUFSIZE);
-				Packet_Utility::UnPackPacket(MyInfo->recvbuf, msg);
-				DisplayText(hLog, "%s\r\n", msg);
-			}
+			EnableWindow(hName, FALSE); // 이름 에딧 텍스트 비활성화
+			EnableWindow(hNameCheck, FALSE); // 이름 체크 버튼 비활성화
+			DisplayText(hLog, "NickName Set Complete\r\n");
 			break;
 
 		case NICKNAME_LIST:
