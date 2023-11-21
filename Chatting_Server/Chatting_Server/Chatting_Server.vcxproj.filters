@@ -13,27 +13,45 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="헤더 파일\Shared">
+      <UniqueIdentifier>{35961776-6542-4887-be19-1a040491385b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Shared">
+      <UniqueIdentifier>{56eef877-ce8d-431e-a7a4-dd5fc66597fe}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Shared\Private\Packet_Utility.cpp">
+    <ClCompile Include="Private\Server_Manager.cpp">
       <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Shared\Private\Packet_Utility.cpp">
+      <Filter>소스 파일\Shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Shared\Private\Function.cpp">
+      <Filter>소스 파일\Shared</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\Shared\Public\Packet_Utility.h">
+    <ClInclude Include="Public\Server_Manager.h">
       <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Shared\Public\Packet_Utility.h">
+      <Filter>헤더 파일\Shared</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Shared\Public\Define.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Shared\Public\Function.h">
-      <Filter>헤더 파일</Filter>
+      <Filter>헤더 파일\Shared</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Shared\Public\Enum.h">
-      <Filter>헤더 파일</Filter>
+      <Filter>헤더 파일\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Shared\Public\Function.h">
+      <Filter>헤더 파일\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Shared\Public\NoCopyObject.h">
+      <Filter>헤더 파일\Shared</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

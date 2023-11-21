@@ -1,113 +1,12 @@
-#pragma comment(lib, "ws2_32.lib")
-
+#include "Server_Manager.h"
 #include "Packet_Utility.h"
 #include "Function.h"
-
-
-struct _ClientInfo
-{
-	SOCKET sock;
-	SOCKADDR_IN clientaddr;
-	STATE state;	
-	bool chatflag;
-	char  nickname[NICKNAMESIZE];
-	char  sendbuf[BUFSIZE];
-	char  recvbuf[BUFSIZE];
-	
-};
-
-DWORD CALLBACK ProcessClient(LPVOID);
-
-_ClientInfo* SearchClient(const char*); //닉네임으로 유저찾기
-bool NicknameCheck(const char*);// 닉네임 중복 체크
-void MaKeChattMessage(const char* , const char* , char* );
-void MakeEnterMessage(const char* , char* );
-void MakeExitMessage(const char* , char* );
-
-
-_ClientInfo* AddClient(SOCKET sock, SOCKADDR_IN clientaddr);
-void RemoveClient(_ClientInfo* ptr);
-
-void AddNickName(const char*);
-void RemoveNickName(const char*);
-
-bool NickNameSetting(_ClientInfo*);
-void ChattingMessageProcess(_ClientInfo*);
-void ChattingOutProcess(_ClientInfo*);
-void ChattingEnterProcess(_ClientInfo*);
-
-void NickNameUpdate();
-
-_ClientInfo* ClientInfo[MAXUSER];
-char* NickNameList[MAXUSER];
-
-int Client_Count = 0;
-int Nick_Count = 0;
-
-CRITICAL_SECTION cs;
-
-int main(int argc, char **argv)
-{
-	// 윈속 초기화
-	WSADATA wsa;
-	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
-		return -1;
-	InitializeCriticalSection(&cs);
-	// socket()
-	SOCKET listen_sock = socket(AF_INET, SOCK_STREAM, 0);
-	if (listen_sock == INVALID_SOCKET) Function::err_quit("socket()");
-
-	// bind()
-	SOCKADDR_IN serveraddr;
-	ZeroMemory(&serveraddr, sizeof(serveraddr));
-	serveraddr.sin_family = AF_INET;
-	serveraddr.sin_port = htons(SERVERPORT);
-	serveraddr.sin_addr.s_addr =inet_addr(SERVERIP);
-	int retval = bind(listen_sock, (SOCKADDR *)&serveraddr, sizeof(serveraddr));
-	if (retval == SOCKET_ERROR) Function::err_quit("bind()");
-
-	// listen()
-	retval = listen(listen_sock, SOMAXCONN);
-	if (retval == SOCKET_ERROR) Function::err_quit("listen()");
-
-	// 데이터 통신에 사용할 변수		
-	int addrlen;
-	SOCKET sock;
-	SOCKADDR_IN clientaddr;	
-	
-	while (1)
-	{
-		addrlen = sizeof(clientaddr);
-
-		sock = accept(listen_sock, (SOCKADDR *)&clientaddr, &addrlen);
-		if (sock == INVALID_SOCKET)
-		{
-			Function::err_display("accept()");
-			continue;
-		}
-
-		_ClientInfo* ptr = AddClient(sock, clientaddr);
-		
-		HANDLE hThread=CreateThread(NULL, 0, ProcessClient, ptr, 0, nullptr);	
-		if (hThread != NULL)
-		{
-			CloseHandle(hThread);
-		}
-
-	}
-
-	closesocket(listen_sock);
-	DeleteCriticalSection(&cs);
-	WSACleanup();
-	return 0;
-}
-
 
 DWORD CALLBACK ProcessClient(LPVOID  _ptr)
 {
 	_ClientInfo* Client_ptr = (_ClientInfo*)_ptr;
-		
-	int size;	
+
+	int size;
 	PROTOCOL protocol{};
 
 	bool breakflag = false;
@@ -126,7 +25,7 @@ DWORD CALLBACK ProcessClient(LPVOID  _ptr)
 			if (send(Client_ptr->sock, Client_ptr->sendbuf, size, 0) == SOCKET_ERROR)
 			{
 				Function::err_display("intro Send()");
-				Client_ptr->state = CONNECT_END_STATE;	
+				Client_ptr->state = CONNECT_END_STATE;
 				break;
 			}
 			Client_ptr->state = CHATT_INITE_STATE;
@@ -143,13 +42,13 @@ DWORD CALLBACK ProcessClient(LPVOID  _ptr)
 			switch (protocol)
 			{
 			case CHATT_NICKNAME:
-				isNicNameSet = NickNameSetting(Client_ptr);
+				isNicNameSet = Server_Manager::GetInstance().NickNameSetting(Client_ptr);
 				break;
 			}
-			
+
 			if (isNicNameSet)
 			{
-				ChattingEnterProcess(Client_ptr);
+				Server_Manager::GetInstance().ChattingEnterProcess(Client_ptr);
 
 				if (Client_ptr->state != CONNECT_END_STATE)
 				{
@@ -170,18 +69,18 @@ DWORD CALLBACK ProcessClient(LPVOID  _ptr)
 			switch (protocol)
 			{
 			case CHATT_MSG:
-				
-				ChattingMessageProcess(Client_ptr);
+
+				Server_Manager::GetInstance().ChattingMessageProcess(Client_ptr);
 				break;
 			case CHATT_OUT:
-					
-				ChattingOutProcess(Client_ptr);
+
+				Server_Manager::GetInstance().ChattingOutProcess(Client_ptr);
 				Client_ptr->state = CONNECT_END_STATE;
 				break;
 			}
 			break;
 		case CONNECT_END_STATE:
-			RemoveClient(Client_ptr);
+			Server_Manager::GetInstance().RemoveClient(Client_ptr);
 			breakflag = true;
 			break;
 		}
@@ -193,12 +92,67 @@ DWORD CALLBACK ProcessClient(LPVOID  _ptr)
 
 	}
 
-
 	return 0;
 }
 
+bool Server_Manager::Initialize()
+{
+	// 윈속 초기화
+	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
+		return false;
+	InitializeCriticalSection(&cs);
+	// socket()
+	listen_sock = socket(AF_INET, SOCK_STREAM, 0);
+	if (listen_sock == INVALID_SOCKET) Function::err_quit("socket()");
 
-_ClientInfo* AddClient(SOCKET sock, SOCKADDR_IN clientaddr)
+	// bind()
+	ZeroMemory(&serveraddr, sizeof(serveraddr));
+	serveraddr.sin_family = AF_INET;
+	serveraddr.sin_port = htons(SERVERPORT);
+	serveraddr.sin_addr.s_addr = inet_addr(SERVERIP);
+	int retval = bind(listen_sock, (SOCKADDR*)&serveraddr, sizeof(serveraddr));
+	if (retval == SOCKET_ERROR) Function::err_quit("bind()");
+
+	// listen()
+	retval = listen(listen_sock, SOMAXCONN);
+	if (retval == SOCKET_ERROR) Function::err_quit("listen()");
+		return false;
+
+	return true;
+}
+
+void Server_Manager::Destroy()
+{
+	closesocket(listen_sock);
+	DeleteCriticalSection(&cs);
+	WSACleanup();
+}
+
+void Server_Manager::User_Update()
+{
+	while (1)
+	{
+		addrlen = sizeof(clientaddr);
+
+		sock = accept(listen_sock, (SOCKADDR*)&clientaddr, &addrlen);
+		if (sock == INVALID_SOCKET)
+		{
+			Function::err_display("accept()");
+			continue;
+		}
+
+		_ClientInfo* ptr = AddClient(sock, clientaddr);
+
+		HANDLE hThread = CreateThread(NULL, 0, ProcessClient, ptr, 0, nullptr);
+		if (hThread != NULL)
+		{
+			CloseHandle(hThread);
+		}
+
+	}
+}
+
+_ClientInfo* Server_Manager::AddClient(SOCKET sock, SOCKADDR_IN clientaddr)
 {
 	printf("\nClient 접속: IP 주소=%s, 포트 번호=%d\n", inet_ntoa(clientaddr.sin_addr),
 		ntohs(clientaddr.sin_port));
@@ -208,16 +162,47 @@ _ClientInfo* AddClient(SOCKET sock, SOCKADDR_IN clientaddr)
 	ZeroMemory(ptr, sizeof(_ClientInfo));
 	ptr->sock = sock;
 	memcpy(&(ptr->clientaddr), &clientaddr, sizeof(clientaddr));
-	ptr->state = INITE_STATE;	
+	ptr->state = INITE_STATE;
 	ptr->chatflag = false;
 	ClientInfo[Client_Count++] = ptr;
-	
+
 	LeaveCriticalSection(&cs);
 	return ptr;
 }
 
+void Server_Manager::RemoveClient(_ClientInfo* ptr)
+{
+	closesocket(ptr->sock);
 
-_ClientInfo* SearchClient(const char* _nick)
+	printf("\nClient 종료: IP 주소=%s, 포트 번호=%d\n",
+		inet_ntoa(ptr->clientaddr.sin_addr),
+		ntohs(ptr->clientaddr.sin_port));
+
+	EnterCriticalSection(&cs);
+
+	for (int i = 0; i < Client_Count; i++)
+	{
+		if (ClientInfo[i] == ptr)
+		{
+			RemoveNickName(ClientInfo[i]->nickname);
+			delete ptr;
+			int j;
+			for (j = i; j < Client_Count - 1; j++)
+			{
+				ClientInfo[j] = ClientInfo[j + 1];
+			}
+			ClientInfo[j] = nullptr;
+			break;
+		}
+	}
+
+	Client_Count--;
+
+	NickNameUpdate();
+	LeaveCriticalSection(&cs);
+}
+
+_ClientInfo* Server_Manager::SearchClient(const char* _nick)
 {
 	EnterCriticalSection(&cs);
 	for (int i = 0; i < Client_Count; i++)
@@ -234,8 +219,7 @@ _ClientInfo* SearchClient(const char* _nick)
 	return nullptr;
 }
 
-
-bool NicknameCheck(const char* _nick)
+bool Server_Manager::NicknameCheck(const char* _nick)
 {
 	EnterCriticalSection(&cs);
 	for (int i = 0; i < Nick_Count; i++)
@@ -251,7 +235,7 @@ bool NicknameCheck(const char* _nick)
 	return true;
 }
 
-void AddNickName(const char* _nick)
+void Server_Manager::AddNickName(const char* _nick)
 {
 	EnterCriticalSection(&cs);
 	char* ptr = new char[strlen(_nick) + 1];
@@ -260,7 +244,7 @@ void AddNickName(const char* _nick)
 	LeaveCriticalSection(&cs);
 }
 
-void RemoveNickName(const char* _nick)
+void Server_Manager::RemoveNickName(const char* _nick)
 {
 	EnterCriticalSection(&cs);
 	for (int i = 0; i < Nick_Count; i++)
@@ -273,35 +257,20 @@ void RemoveNickName(const char* _nick)
 			{
 				NickNameList[j] = NickNameList[j + 1];
 			}
-			NickNameList[Nick_Count--] = nullptr;			
+			NickNameList[Nick_Count--] = nullptr;
 			break;
 		}
 	}
 	LeaveCriticalSection(&cs);
 }
 
-void MaKeChattMessage(const char* _nick, const char* _msg, char* _chattmsg)
-{
-	sprintf(_chattmsg, "[ %s ] %s", _nick, _msg);
-}
-
-void MakeEnterMessage(const char* _nick, char* _msg)
-{
-	sprintf(_msg, "%s님이 입장하셨습니다.", _nick);
-}
-void MakeExitMessage(const char* _nick, char* _msg)
-{
-	sprintf(_msg, "%s님이 퇴장하셨습니다.", _nick);
-}
-
-
-bool NickNameSetting(_ClientInfo* _clientinfo)
+bool Server_Manager::NickNameSetting(_ClientInfo* _clientinfo)
 {
 	EnterCriticalSection(&cs);
 
 	char nName[BUFSIZE] = { 0 };
 	int size = 0;
-	
+
 	Packet_Utility::UnPackPacket(_clientinfo->recvbuf, nName); // 닉네임 획득
 
 	if (!strcmp(_clientinfo->nickname, nName)) // 현재 닉네임과 곂치는지 확인
@@ -310,7 +279,7 @@ bool NickNameSetting(_ClientInfo* _clientinfo)
 		return false;
 	}
 
-	if (!NicknameCheck(nName) ) // 이미 존재하는 닉네임인지 확인
+	if (!NicknameCheck(nName)) // 이미 존재하는 닉네임인지 확인
 	{
 		LeaveCriticalSection(&cs);
 		//size = PackPacket(_clientinfo->sendbuf, PROTOCOL::NICKNAME_EROR, "NickName Set Error");
@@ -324,7 +293,7 @@ bool NickNameSetting(_ClientInfo* _clientinfo)
 	AddNickName(nName);
 
 	char message[BUFSIZE] = { 0 };
-	MakeEnterMessage(nName, message);
+	//MakeEnterMessage(nName, message);
 	for (int i = 0; i < Client_Count; i++)
 	{
 		int size = 0;
@@ -332,12 +301,43 @@ bool NickNameSetting(_ClientInfo* _clientinfo)
 		send(ClientInfo[i]->sock, ClientInfo[i]->sendbuf, size, 0);
 	}
 
-	LeaveCriticalSection(&cs);	
+	LeaveCriticalSection(&cs);
 
 	return true;
 }
 
-void ChattingMessageProcess(_ClientInfo* _clientinfo)
+void Server_Manager::ChattingEnterProcess(_ClientInfo* _clientinfo)
+{
+	EnterCriticalSection(&cs);
+
+	NickNameUpdate();
+
+	LeaveCriticalSection(&cs);
+}
+
+void Server_Manager::ChattingOutProcess(_ClientInfo* _clientinfo)
+{
+	EnterCriticalSection(&cs);
+
+	char nName[BUFSIZE] = { 0 };
+	int size = 0;
+
+	Packet_Utility::UnPackPacket(_clientinfo->recvbuf, nName); // 닉네임 획득
+
+	char message[BUFSIZE] = { 0 };
+	//MakeExitMessage(nName, message);
+
+	for (int i = 0; i < Client_Count; i++)
+	{
+		int size = 0;
+		size = Packet_Utility::PackPacket(ClientInfo[i]->sendbuf, PROTOCOL::CHATT_OUT, message);
+		send(ClientInfo[i]->sock, ClientInfo[i]->sendbuf, size, 0);
+	}
+
+	LeaveCriticalSection(&cs);
+}
+
+void Server_Manager::ChattingMessageProcess(_ClientInfo* _clientinfo)
 {
 	EnterCriticalSection(&cs);
 
@@ -362,38 +362,7 @@ void ChattingMessageProcess(_ClientInfo* _clientinfo)
 	LeaveCriticalSection(&cs);
 }
 
-void ChattingEnterProcess(_ClientInfo* _clientinfo)
-{
-	EnterCriticalSection(&cs);
-
-	NickNameUpdate();
-
-	LeaveCriticalSection(&cs);
-}
-
-void ChattingOutProcess(_ClientInfo* _clientinfo)
-{
-	EnterCriticalSection(&cs);
-
-	char nName[BUFSIZE] = { 0 };
-	int size = 0;
-
-	Packet_Utility::UnPackPacket(_clientinfo->recvbuf, nName); // 닉네임 획득
-
-	char message[BUFSIZE] = { 0 };
-	MakeExitMessage(nName, message);
-
-	for (int i = 0; i < Client_Count; i++)
-	{
-		int size = 0;
-		size = Packet_Utility::PackPacket(ClientInfo[i]->sendbuf, PROTOCOL::CHATT_OUT, message);
-		send(ClientInfo[i]->sock, ClientInfo[i]->sendbuf, size, 0);
-	}
-
-	LeaveCriticalSection(&cs);
-}
-
-void NickNameUpdate()
+void Server_Manager::NickNameUpdate()
 {
 	for (int i = 0; i < Nick_Count; i++)
 	{
