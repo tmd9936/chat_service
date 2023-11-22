@@ -19,4 +19,6 @@ public:
 	static bool PacketRecv(SOCKET _sock, char* _buf);
 
 	static PROTOCOL GetProtocol(const char* _ptr);
+
+	static int bindSocket(SOCKET s, SOCKADDR_IN& addr);
 };

@@ -18,18 +18,18 @@ DWORD CALLBACK ProcessClient(LPVOID  _ptr)
 		switch (Client_ptr->state)
 		{
 		case INITE_STATE:
-			Client_ptr->state = STATE::INTRO_STATE;
+			Client_ptr->state = STATE::CHATT_INITE_STATE;
 			break;
-		case INTRO_STATE:
-			size = Packet_Utility::PackPacket(Client_ptr->sendbuf, INTRO, INTRO_MSG);
-			if (send(Client_ptr->sock, Client_ptr->sendbuf, size, 0) == SOCKET_ERROR)
-			{
-				Function::err_display("intro Send()");
-				Client_ptr->state = CONNECT_END_STATE;
-				break;
-			}
-			Client_ptr->state = CHATT_INITE_STATE;
-			break;
+		//case INTRO_STATE:
+		//	size = Packet_Utility::PackPacket(Client_ptr->sendbuf, INTRO, INTRO_MSG);
+		//	if (send(Client_ptr->sock, Client_ptr->sendbuf, size, 0) == SOCKET_ERROR)
+		//	{
+		//		Function::err_display("intro Send()");
+		//		Client_ptr->state = CONNECT_END_STATE;
+		//		break;
+		//	}
+		//	Client_ptr->state = CHATT_INITE_STATE;
+		//	break;
 		case CHATT_INITE_STATE:
 			if (!Function::PacketRecv(Client_ptr->sock, Client_ptr->recvbuf))
 			{

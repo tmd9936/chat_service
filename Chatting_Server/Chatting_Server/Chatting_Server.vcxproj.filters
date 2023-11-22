@@ -19,6 +19,12 @@
     <Filter Include="소스 파일\Shared">
       <UniqueIdentifier>{56eef877-ce8d-431e-a7a4-dd5fc66597fe}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\ClientStateFunctor">
+      <UniqueIdentifier>{0ccc0d9d-5abb-4163-a436-1ec1bfc9a07a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="헤더 파일\ClientStateFunctor">
+      <UniqueIdentifier>{ffc85145-5563-4d27-9a90-0b461b20ea00}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source.cpp">
@@ -38,6 +44,18 @@
     </ClCompile>
     <ClCompile Include="Private\ServerManager.cpp">
       <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Private\ClientIniteState.cpp">
+      <Filter>소스 파일\ClientStateFunctor</Filter>
+    </ClCompile>
+    <ClCompile Include="Private\ChattIniteState.cpp">
+      <Filter>소스 파일\ClientStateFunctor</Filter>
+    </ClCompile>
+    <ClCompile Include="Private\ChattingState.cpp">
+      <Filter>소스 파일\ClientStateFunctor</Filter>
+    </ClCompile>
+    <ClCompile Include="Private\ConnectEndState.cpp">
+      <Filter>소스 파일\ClientStateFunctor</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -64,6 +82,18 @@
     </ClInclude>
     <ClInclude Include="Public\ServerManager.h">
       <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Public\ClientIniteState.h">
+      <Filter>헤더 파일\ClientStateFunctor</Filter>
+    </ClInclude>
+    <ClInclude Include="Public\ChattIniteState.h">
+      <Filter>헤더 파일\ClientStateFunctor</Filter>
+    </ClInclude>
+    <ClInclude Include="Public\ChattingState.h">
+      <Filter>헤더 파일\ClientStateFunctor</Filter>
+    </ClInclude>
+    <ClInclude Include="Public\ConnectEndState.h">
+      <Filter>헤더 파일\ClientStateFunctor</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

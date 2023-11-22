@@ -22,4 +22,3 @@
 #define NICKNAME_ERROR_MSG "이미있는 닉네임입니다."
 
 using namespace std;
-//typedef int clientid;

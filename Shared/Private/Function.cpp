@@ -78,8 +78,16 @@ bool Function::PacketRecv(SOCKET _sock, char* _buf)
 
 PROTOCOL Function::GetProtocol(const char* _ptr)
 {
-	PROTOCOL protocol;
+	PROTOCOL protocol{};
 	memcpy(&protocol, _ptr, sizeof(PROTOCOL));
 
 	return protocol;
 }
+
+int Function::bindSocket(SOCKET s, SOCKADDR_IN& addr)
+{
+	int retval = bind(s, (SOCKADDR*)&addr, sizeof(addr));
+	return 0;
+}
+
+

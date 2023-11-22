@@ -264,7 +264,7 @@ DWORD CALLBACK RecvThread(LPVOID _ptr)
 		case CHATT_OUT:
 			memset(msg, 0, BUFSIZE);
 			Packet_Utility::UnPackPacket(MyInfo->recvbuf, msg);
-			DisplayText(hLog, "%s\r\n", msg);
+			DisplayText(hLog, "%s out this chatroom\r\n", msg);
 			break;
 		}
 
