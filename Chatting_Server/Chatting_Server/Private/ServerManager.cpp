@@ -161,7 +161,7 @@ void ServerManager::ChattingEnterProcess(ClientInfo* _clientinfo)
 {
 	EnterCriticalSection(&cs);
 
-	NickNameUpdate();
+	NickNameUpdate(_clientinfo);
 
 	LeaveCriticalSection(&cs);
 }
@@ -235,7 +235,7 @@ bool ServerManager::NickNameCheck(const char* _nick)
 	return true;
 }
 
-void ServerManager::NickNameUpdate()
+void ServerManager::NickNameUpdate(ClientInfo* _clientinfo)
 {
 	char* NickNameList[MAXUSER] = {};
 
@@ -245,10 +245,15 @@ void ServerManager::NickNameUpdate()
 		NickNameList[len] = new char[NICKNAMESIZE];
 		iter->second->GetNickName(NickNameList[len++]);
 	}
+	_clientinfo->SendMessageToClient(NICKNAME_LIST, NickNameList, clients.size());
 
+	char nickName[NICKNAMESIZE] = {};
+	_clientinfo->GetNickName(nickName);
 	for (auto iter = clients.begin(); iter != clients.end(); ++iter)
 	{
-		iter->second->SendMessageToClient(NICKNAME_LIST, NickNameList, clients.size());
+		if (iter->second == _clientinfo)
+			continue;
+		iter->second->SendMessageToClient(CHATT_ENTER, nickName);
 	}
 
 	for (int i = 0; i < len; ++i)

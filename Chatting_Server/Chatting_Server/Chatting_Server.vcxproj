@@ -125,7 +125,6 @@
     <ClCompile Include="Private\ClientIniteState.cpp" />
     <ClCompile Include="Private\ConnectEndState.cpp" />
     <ClCompile Include="Private\ServerManager.cpp" />
-    <ClCompile Include="Private\Server_Manager.cpp" />
     <ClCompile Include="source.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -140,7 +139,6 @@
     <ClInclude Include="Public\ClientIniteState.h" />
     <ClInclude Include="Public\ConnectEndState.h" />
     <ClInclude Include="Public\ServerManager.h" />
-    <ClInclude Include="Public\Server_Manager.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

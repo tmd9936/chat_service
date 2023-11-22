@@ -91,6 +91,13 @@ DWORD CALLBACK RecvThread(LPVOID _ptr)
 			ClientManager::GetInstance().UpdateUserList();
 			break;
 
+		case CHATT_ENTER:
+			memset(msg, 0, BUFSIZE);
+			ClientManager::GetInstance().UnPackPacket(msg);
+			SendMessage(hUserList, LB_ADDSTRING, 0, (LPARAM)msg);
+			ClientManager::GetInstance().DisplayText(hLog, "%s enter this chatroom\r\n", msg);
+			break;
+
 		case CHATT_MSG:
 			memset(msg, 0, BUFSIZE);
 			ClientManager::GetInstance().UnPackPacket(msg);
@@ -100,6 +107,7 @@ DWORD CALLBACK RecvThread(LPVOID _ptr)
 		case CHATT_OUT:
 			memset(msg, 0, BUFSIZE);
 			ClientManager::GetInstance().UnPackPacket(msg);
+			SendMessage(hUserList, LB_DELETESTRING, 0, (LPARAM)msg);
 			ClientManager::GetInstance().DisplayText(hLog, "%s out this chatroom\r\n", msg);
 			break;
 		}
@@ -186,9 +194,10 @@ void ClientManager::Destroy()
 	WSACleanup();
 }
 
-void ClientManager::WaitClientMain()
+void ClientManager::WaitAllThread()
 {
 	WaitForSingleObject(hClientMain, INFINITE);
+	WaitForSingleObject(hRecvThread, INFINITE);
 }
 
 int ClientManager::DataSendToServer(PROTOCOL _protocol, char* _str)

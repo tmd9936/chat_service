@@ -29,7 +29,7 @@ public:
 private:
 	ClientInfo* AddClient(SOCKET sock, SOCKADDR_IN clientaddr);
 	bool NickNameCheck(const char* _nick);
-	void NickNameUpdate();
+	void NickNameUpdate(ClientInfo* _clientinfo);
 
 private:
 	unordered_map<int, ClientInfo*> clients;

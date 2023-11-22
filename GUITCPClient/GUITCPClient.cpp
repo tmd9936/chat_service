@@ -35,7 +35,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
 	DialogBox(hInstance, MAKEINTRESOURCE(IDD_DIALOG1), NULL, DlgProc);
 
-	ClientManager::GetInstance().WaitClientMain();
+	ClientManager::GetInstance().WaitAllThread();
 
 	// 이벤트 제거
 	CloseHandle(hWriteEvent);
@@ -63,6 +63,7 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 		hSendButton = GetDlgItem(hDlg, IDOK);
 		SendMessage(hMessage, EM_SETLIMITTEXT, BUFSIZE, 0);	
+		ClientManager::GetInstance().RecvThreadRun();
 		ClientManager::GetInstance().SetState(CHATT_INITE_STATE);
 		return TRUE;
 	case WM_COMMAND:
@@ -80,6 +81,9 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			return TRUE;
 		case IDC_NAMECHECK:
 			// connect()
+			if (ClientManager::GetInstance().GetState() != CHATT_INITE_STATE)
+				return TRUE;
+
 			if (false == ClientManager::GetInstance().Connect())
 				return TRUE;
 

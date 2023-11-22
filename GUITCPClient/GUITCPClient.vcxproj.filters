@@ -30,6 +30,9 @@
     <ClCompile Include="..\Shared\Private\Function.cpp">
       <Filter>소스 파일\Shared</Filter>
     </ClCompile>
+    <ClCompile Include="ClientManager.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -49,6 +52,12 @@
     </ClInclude>
     <ClInclude Include="..\Shared\Public\Packet_Utility.h">
       <Filter>헤더 파일\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="ClientManager.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Client_Define.h">
+      <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

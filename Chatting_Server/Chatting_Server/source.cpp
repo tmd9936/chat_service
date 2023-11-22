@@ -1,12 +1,9 @@
 #pragma comment(lib, "ws2_32.lib")
 
+#include <time.h>
 #include "Packet_Utility.h"
 #include "Function.h"
-#include "Server_Manager.h"
 #include "ServerManager.h"
-
-#include <time.h>
-
 
 int main(int argc, char **argv)
 {

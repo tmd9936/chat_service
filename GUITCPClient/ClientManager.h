@@ -17,7 +17,7 @@ public:
 	bool	Initialize();
 	bool	Connect();
 	void	Destroy();
-	void	WaitClientMain();
+	void	WaitAllThread();
 	int		DataSendToServer(PROTOCOL _protocol, char* _str);
 
 public:
@@ -58,8 +58,8 @@ public:
 private:
 	SOCKET sock;
 	STATE state = { STATE::INITE_STATE };
-	char sendbuf[BUFSIZE];
-	char recvbuf[BUFSIZE];
+	char sendbuf[BUFSIZE] = {};
+	char recvbuf[BUFSIZE] = {};
 
 private:
 	HANDLE hClientMain = { nullptr };
