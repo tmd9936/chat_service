@@ -1,17 +1,5 @@
 #include "Packet_Utility.h"
 
-void Packet_Utility::UnPackPacket(const char* _buf, char* _str)
-{
-	int strsize;
-	const char* ptr = _buf + sizeof(PROTOCOL);
-
-	memcpy(&strsize, ptr, sizeof(strsize));
-	ptr = ptr + sizeof(strsize);
-
-	memcpy(_str, ptr, strsize);
-	ptr = ptr + strsize;
-}
-
 int Packet_Utility::PackPacket(char* _buf, PROTOCOL _protocol, const char* _str1)
 {
 	char* ptr = _buf;
@@ -75,6 +63,19 @@ int Packet_Utility::PackPacket(char* _buf, PROTOCOL _protocol, char** _strlist, 
 
 	return size;
 }
+
+void Packet_Utility::UnPackPacket(const char* _buf, char* _str)
+{
+	int strsize;
+	const char* ptr = _buf + sizeof(PROTOCOL);
+
+	memcpy(&strsize, ptr, sizeof(strsize));
+	ptr = ptr + sizeof(strsize);
+
+	memcpy(_str, ptr, strsize);
+	ptr = ptr + strsize;
+}
+
 
 void Packet_Utility::UnPackPacket(const char* _buf, vector<string>& vec, int& _count)
 {
