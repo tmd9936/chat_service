@@ -2,33 +2,15 @@
 #include "resource.h"
 #include "Packet_Utility.h"
 #include "Function.h"
+#include "ClientManager.h"
 
 using namespace std;
-
-struct _MyInfo
-{
-	SOCKET sock;
-	STATE state;
-	char sendbuf[BUFSIZE];
-	char recvbuf[BUFSIZE];
-}*MyInfo;
-
-char nickname[NICKNAMESIZE];
 
 // 대화상자 프로시저
 BOOL CALLBACK DlgProc(HWND, UINT, WPARAM, LPARAM);
 
-// 편집 컨트롤 출력 함수
-void DisplayText(char *fmt, ...);
-
-// 소켓 통신 스레드 함수
-DWORD WINAPI ClientMain(LPVOID);
-DWORD CALLBACK RecvThread(LPVOID);
-
-void UpdateUserList(char*);
-
-char buf[BUFSIZE+1]; // 데이터 송수신 버퍼
-char chatMessage[BUFSIZE]; // 채팅 메세진
+char nickname[NICKNAMESIZE]; // 닉네임 
+char chatMessage[BUFSIZE]; // 채팅 메세지
 
 HANDLE hReadEvent, hWriteEvent; // 이벤트
 HANDLE hNameEvent; // 이벤트
@@ -40,8 +22,6 @@ HWND hNameCheck; // 이름 체크 컨트롤
 HWND hUserList; // 유저 리스트 컨트롤
 HWND hChat; // 채팅 화면 컨트롤
 
-HANDLE hClientMain, hRecvThread;
-
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                    LPSTR lpCmdLine, int nCmdShow)
 {
@@ -50,31 +30,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	if(hReadEvent == NULL) return 1;
 	hWriteEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 	if(hWriteEvent == NULL) return 1;
-		
-	// 소켓 통신 스레드 생성	
-	// 대화상자 생성
 
-	MyInfo = new _MyInfo;
-	memset(MyInfo, 0, sizeof(_MyInfo));
-
-	hClientMain = CreateThread(NULL, 0, ClientMain, NULL, 0, NULL);	
+	ClientManager::GetInstance().ClientMainThreadRun();
 
 	DialogBox(hInstance, MAKEINTRESOURCE(IDD_DIALOG1), NULL, DlgProc);
 
-	WaitForSingleObject(hClientMain, INFINITE);
+	ClientManager::GetInstance().WaitClientMain();
 
 	// 이벤트 제거
 	CloseHandle(hWriteEvent);
 	CloseHandle(hReadEvent);
-
-	CloseHandle(hClientMain);
-	CloseHandle(hRecvThread);
-
-	// closesocket()
-	closesocket(MyInfo->sock);
-
-	// 윈속 종료
-	WSACleanup();
+	
+	ClientManager::GetInstance().Destroy();
 	return 0;
 }
 
@@ -96,197 +63,45 @@ BOOL CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 		hSendButton = GetDlgItem(hDlg, IDOK);
 		SendMessage(hMessage, EM_SETLIMITTEXT, BUFSIZE, 0);	
-		hRecvThread = CreateThread(NULL, 0, RecvThread, NULL, 0, NULL);
-		MyInfo->state = CHATT_INITE_STATE;
+		ClientManager::GetInstance().SetState(CHATT_INITE_STATE);
 		return TRUE;
 	case WM_COMMAND:
 		switch(LOWORD(wParam)){
 		case IDOK:
+			if (ClientManager::GetInstance().GetState() != CHATTING_STATE)
+				return TRUE;
 			EnableWindow(hSendButton, FALSE); // 보내기 버튼 비활성화
 			WaitForSingleObject(hReadEvent, INFINITE); // 읽기 완료 기다리기
 			GetDlgItemText(hDlg, IDC_MESSAGE, chatMessage, BUFSIZE);
 			SetEvent(hWriteEvent); // 쓰기 완료 알리기
-			size = Packet_Utility::PackPacket(buf, PROTOCOL::CHATT_MSG, chatMessage);
-			send(MyInfo->sock, buf, size, 0);
+			ClientManager::GetInstance().DataSendToServer(PROTOCOL::CHATT_MSG, chatMessage);
 			SetWindowText(hMessage, "");
 			SetFocus(hMessage);			
 			return TRUE;
 		case IDC_NAMECHECK:
 			// connect()
-			SOCKADDR_IN serveraddr;
-			ZeroMemory(&serveraddr, sizeof(serveraddr));
-			serveraddr.sin_family = AF_INET;
-			serveraddr.sin_addr.s_addr = inet_addr(SERVERIP);
-			serveraddr.sin_port = htons(SERVERPORT);
-			retval = connect(MyInfo->sock, (SOCKADDR*)&serveraddr, sizeof(serveraddr));
-			if (retval == SOCKET_ERROR) Function::err_quit("connect()");
+			if (false == ClientManager::GetInstance().Connect())
+				return TRUE;
+
 			WaitForSingleObject(hReadEvent, INFINITE); // 읽기 완료 기다리기
 			GetDlgItemText(hDlg, IDC_NAME, nickname, NICKNAMESIZE);
 			SetEvent(hWriteEvent); // 쓰기 완료 알리기
-			size = Packet_Utility::PackPacket(buf, PROTOCOL::CHATT_NICKNAME, nickname);
-			send(MyInfo->sock, buf, size, 0);
-			MyInfo->state = CHATTING_STATE;
+			ClientManager::GetInstance().DataSendToServer(PROTOCOL::CHATT_NICKNAME, nickname);
+			ClientManager::GetInstance().SetState(CHATTING_STATE);
 			return TRUE;
 		case IDCANCEL:
 			//채팅 종료 알리기
-			size = Packet_Utility::PackPacket(buf, PROTOCOL::CHATT_OUT, nickname);
-			send(MyInfo->sock, buf, size, 0);
+			ClientManager::GetInstance().DataSendToServer(PROTOCOL::CHATT_OUT, nickname);
+			ClientManager::GetInstance().SetState(CHATT_OUT_STATE);
 			EndDialog(hDlg, IDCANCEL);
-			MyInfo->state = CHATT_OUT_STATE;
 			return TRUE;
 		}
 		return FALSE;
 	case WM_CLOSE:
-		size = Packet_Utility::PackPacket(buf, PROTOCOL::CHATT_OUT, nickname);
-		send(MyInfo->sock, buf, size, 0);
-		MyInfo->state = CHATT_OUT_STATE;
+		ClientManager::GetInstance().DataSendToServer(PROTOCOL::CHATT_OUT, nickname);
+		ClientManager::GetInstance().SetState(CHATT_OUT_STATE);
+		EndDialog(hDlg, IDCANCEL);
 		return TRUE;
 	}
 	return FALSE;
-}
-
-// 편집 컨트롤 출력 함수
-void DisplayText(HWND _hWnd, char *fmt, ...)
-{
-	va_list arg;
-	va_start(arg, fmt);
-
-	char cbuf[BUFSIZE + 256] = { 0 };
-	vsprintf(cbuf, fmt, arg);
-
-	int nLength = GetWindowTextLength(_hWnd);
-	SendMessage(_hWnd, EM_SETSEL, nLength, nLength);
-	SendMessage(_hWnd, EM_REPLACESEL, FALSE, (LPARAM)cbuf);
-
-	va_end(arg);
-}
-
-// TCP 클라이언트 시작 부분
-DWORD WINAPI ClientMain(LPVOID arg)
-{
-	// 윈속 초기화
-	WSADATA wsa;
-	if(WSAStartup(MAKEWORD(2,2), &wsa) != 0)
-		return 1;
-
-	// socket()
-	MyInfo->sock = socket(AF_INET, SOCK_STREAM, 0);
-	if(MyInfo->sock == INVALID_SOCKET) Function::err_quit("socket()");
-	
-	
-	char msg[BUFSIZE] = { 0 };
-	int size;
-
-	bool endflag = false;
-
-	while(1)
-	{	
-		WaitForSingleObject(hWriteEvent, 1000); // 쓰기 완료 기다리기
-
-		// 문자열 길이가 0이면 보내지 않음
-		if(MyInfo->state != CHATT_OUT_STATE && strlen(buf) == 0)
-		{
-			EnableWindow(hSendButton, FALSE); // 보내기 버튼 활성화
-			SetEvent(hReadEvent); // 읽기 완료 알리기
-			continue;
-		}
-
-		switch (MyInfo->state)
-		{
-		case CHATT_INITE_STATE:
-			break;
-
-		case CHATTING_STATE:			
-			break;
-
-		case CHATT_OUT_STATE:			
-			endflag = true;
-			break;
-		}
-		
-		EnableWindow(hSendButton, TRUE); // 보내기 버튼 활성화
-		SetEvent(hReadEvent); // 읽기 완료 알리기
-
-		if (endflag)
-		{
-			break;
-		}
-	}
-
-	return 0;
-}
-
-DWORD CALLBACK RecvThread(LPVOID _ptr)
-{
-	PROTOCOL protocol{};
-	int size = 0;	
-	char msg[BUFSIZE] = { 0 };
-	int count = 0;	
-
-	while (1)
-	{
-		if (MyInfo->state == CHATT_INITE_STATE)
-			continue;
-
-		if (!Function::PacketRecv(MyInfo->sock, MyInfo->recvbuf))
-		{
-			Function::err_display("recv error()");
-			return -1;
-		}
-
-		protocol= Function::GetProtocol(MyInfo->recvbuf);
-
-		switch (protocol)
-		{
-		case INTRO:
-			break;
-
-		case NICKNAME_EROR:
-			DisplayText(hLog, "NickName Set Error\r\n");
-			break;
-
-		case NICKNAME_COMPLETE:
-			EnableWindow(hName, FALSE); // 이름 에딧 텍스트 비활성화
-			EnableWindow(hNameCheck, FALSE); // 이름 체크 버튼 비활성화
-			DisplayText(hLog, "NickName Set Complete\r\n");
-			break;
-
-		case NICKNAME_LIST:
-			UpdateUserList(MyInfo->recvbuf);
-			break;
-
-		case CHATT_MSG:
-			memset(msg, 0, BUFSIZE);
-			Packet_Utility::UnPackPacket(MyInfo->recvbuf, msg);
-			DisplayText(hChat, "%s\r\n", msg);
-			break;
-
-		case CHATT_OUT:
-			memset(msg, 0, BUFSIZE);
-			Packet_Utility::UnPackPacket(MyInfo->recvbuf, msg);
-			DisplayText(hLog, "%s out this chatroom\r\n", msg);
-			break;
-		}
-
-	}
-
-	return 0;
-}
-
-void UpdateUserList(char* _buf)
-{
-	if (_buf == nullptr)
-		return;
-
-	vector<string> data;
-	int count = 0;
-	Packet_Utility::UnPackPacket(_buf, data, count);
-
-	SendMessage(hUserList, LB_RESETCONTENT, 0, 0);
-	for (int i = 0; i < count; i++)
-	{
-		int pos = (int)SendMessage(hUserList, LB_ADDSTRING, 0,
-			(LPARAM)data[i].c_str());
-		SendMessage(hUserList, LB_SETITEMDATA, pos, (LPARAM)i);
-	}
 }

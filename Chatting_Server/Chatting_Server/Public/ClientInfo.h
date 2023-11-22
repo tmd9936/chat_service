@@ -57,7 +57,6 @@ public:
 	}
 
 	void SetClientAddr(const SOCKADDR_IN& _addr) {
-		//clientaddr = _addr;
 		memcpy(&(clientaddr), &_addr, sizeof(_addr));
 	}
 

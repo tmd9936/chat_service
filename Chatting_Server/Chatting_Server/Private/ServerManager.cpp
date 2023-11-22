@@ -3,6 +3,7 @@
 #include "ServerManager.h"
 #include "Packet_Utility.h"
 #include "Function.h"
+
 #include "ClientIniteState.h"
 #include "ChattIniteState.h"
 #include "ChattingState.h"
@@ -16,9 +17,6 @@ DWORD CALLBACK ProcessClientThread(LPVOID  _ptr)
 	ClientInfo* Client_ptr = static_cast<ClientInfo*>(_ptr);
 	PROTOCOL protocol{};
 
-	//bool breakflag = false;
-	//bool isNicNameSet = true;
-
 	unordered_map<int, function<bool(ClientInfo* _clientInfo)>> functionMap;
 
 	functionMap.insert({ INITE_STATE,  ClientIniteState() });
@@ -26,77 +24,10 @@ DWORD CALLBACK ProcessClientThread(LPVOID  _ptr)
 	functionMap.insert({ CHATTING_STATE, ChattingState() });
 	functionMap.insert({ CONNECT_END_STATE, ConnectEndState() });
 
-	while (1)
+	bool canDoflag = true;
+	while (canDoflag)
 	{
-		bool canDoflag = functionMap[Client_ptr->GetState()](Client_ptr);
-		if(!canDoflag)
-		{
-			break;
-		}
-
-		//switch (Client_ptr->GetState())
-		//{
-		//case INITE_STATE:
-		//	functionMap[Client_ptr->GetState()](Client_ptr);
-		//	break;
-		//case CHATT_INITE_STATE:
-		//	if (!Client_ptr->PacketRecv())
-		//	{
-		//		Client_ptr->SetState(CONNECT_END_STATE);
-		//		break;
-		//	}
-
-		//	protocol = Client_ptr->GetProtocol();
-
-		//	switch (protocol)
-		//	{
-		//	case CHATT_NICKNAME:
-		//		isNicNameSet = ServerManager::GetInstance().NickNameSetting(Client_ptr);
-		//		break;
-		//	}
-
-		//	if (isNicNameSet)
-		//	{
-		//		ServerManager::GetInstance().ChattingEnterProcess(Client_ptr);
-
-		//		if (Client_ptr->GetState() != CONNECT_END_STATE)
-		//		{
-		//			Client_ptr->SetState(CHATTING_STATE);
-		//		}
-		//	}
-
-		//	break;
-		//case CHATTING_STATE:
-		//	if (!Client_ptr->PacketRecv())
-		//	{
-		//		Client_ptr->SetState(CONNECT_END_STATE);
-		//		break;
-		//	}
-
-		//	protocol = Client_ptr->GetProtocol();
-
-		//	switch (protocol)
-		//	{
-		//	case CHATT_MSG:
-		//		ServerManager::GetInstance().ChattingMessageProcess(Client_ptr);
-		//		break;
-		//	case CHATT_OUT:
-		//		ServerManager::GetInstance().ChattingOutProcess(Client_ptr);
-		//		Client_ptr->SetState(CONNECT_END_STATE);
-		//		break;
-		//	}
-		//	break;
-		//case CONNECT_END_STATE:
-		//	ServerManager::GetInstance().RemoveClient(Client_ptr);
-		//	breakflag = true;
-		//	break;
-		//}
-
-		//if (breakflag)
-		//{
-		//	break;
-		//}
-
+		canDoflag = functionMap[Client_ptr->GetState()](Client_ptr);
 	}
 
 	return 0;
@@ -204,7 +135,6 @@ ClientInfo* ServerManager::AddClient(SOCKET sock, SOCKADDR_IN clientaddr)
 
 bool ServerManager::NickNameSetting(ClientInfo* _clientinfo)
 {
-	//char message[BUFSIZE] = { 0 };
 	char nName[BUFSIZE] = { 0 };
 	int size = 0;
 
