@@ -95,3 +95,23 @@ enum STATE
 	CONNECT_END_STATE // 접속 종료 상태
 };
 ```
+
+클라이언트 상태가 추가될 시 서버에서 쉽게 상태에 따른 행동을 추가 할 수 있게 다음과 같이 함수객체를 이용하여 unordered_map으로 함수를 호출하는 방식으로 구현했습니다.
+
+```CPP
+ClientInfo* Client_ptr = static_cast<ClientInfo*>(_ptr);
+	PROTOCOL protocol{};
+
+	unordered_map<int, function<bool(ClientInfo* _clientInfo)>> functionMap;
+
+	functionMap.insert({ INITE_STATE,  ClientIniteState() });
+	functionMap.insert({ CHATT_INITE_STATE, ChattIniteState() });
+	functionMap.insert({ CHATTING_STATE, ChattingState() });
+	functionMap.insert({ CONNECT_END_STATE, ConnectEndState() });
+
+	bool canDoflag = true;
+	while (canDoflag)
+	{
+		canDoflag = functionMap[Client_ptr->GetState()](Client_ptr);
+	}
+```
