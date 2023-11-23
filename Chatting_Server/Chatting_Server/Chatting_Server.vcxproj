@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -85,6 +85,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>false</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>../../Shared/Public/;../../Shared/Private/;Public/;Private/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -116,7 +117,28 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\Shared\Private\Function.cpp" />
+    <ClCompile Include="..\..\Shared\Private\Packet_Utility.cpp" />
+    <ClCompile Include="Private\ChattingState.cpp" />
+    <ClCompile Include="Private\ChattIniteState.cpp" />
+    <ClCompile Include="Private\ClientInfo.cpp" />
+    <ClCompile Include="Private\ClientIniteState.cpp" />
+    <ClCompile Include="Private\ConnectEndState.cpp" />
+    <ClCompile Include="Private\ServerManager.cpp" />
     <ClCompile Include="source.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\Shared\Public\Define.h" />
+    <ClInclude Include="..\..\Shared\Public\Enum.h" />
+    <ClInclude Include="..\..\Shared\Public\Function.h" />
+    <ClInclude Include="..\..\Shared\Public\NoCopyObject.h" />
+    <ClInclude Include="..\..\Shared\Public\Packet_Utility.h" />
+    <ClInclude Include="Public\ChattingState.h" />
+    <ClInclude Include="Public\ChattIniteState.h" />
+    <ClInclude Include="Public\ClientInfo.h" />
+    <ClInclude Include="Public\ClientIniteState.h" />
+    <ClInclude Include="Public\ConnectEndState.h" />
+    <ClInclude Include="Public\ServerManager.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

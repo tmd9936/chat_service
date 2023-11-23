@@ -13,14 +13,50 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="헤더 파일\Shared">
+      <UniqueIdentifier>{4f54c08b-32fa-453d-ada4-9fe1586031e8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Shared">
+      <UniqueIdentifier>{c2d2ad3e-671c-4b4d-b7b5-81c2e4f298cc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GUITCPClient.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="..\Shared\Private\Packet_Utility.cpp">
+      <Filter>소스 파일\Shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Shared\Private\Function.cpp">
+      <Filter>소스 파일\Shared</Filter>
+    </ClCompile>
+    <ClCompile Include="ClientManager.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Shared\Public\Define.h">
+      <Filter>헤더 파일\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Shared\Public\Enum.h">
+      <Filter>헤더 파일\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Shared\Public\Function.h">
+      <Filter>헤더 파일\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Shared\Public\NoCopyObject.h">
+      <Filter>헤더 파일\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Shared\Public\Packet_Utility.h">
+      <Filter>헤더 파일\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="ClientManager.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Client_Define.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>

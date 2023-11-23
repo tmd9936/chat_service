@@ -53,6 +53,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../Shared/Public/;../Shared/Private/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -77,9 +78,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\Shared\Private\Function.cpp" />
+    <ClCompile Include="..\Shared\Private\Packet_Utility.cpp" />
+    <ClCompile Include="ClientManager.cpp" />
     <ClCompile Include="GUITCPClient.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\Shared\Public\Define.h" />
+    <ClInclude Include="..\Shared\Public\Enum.h" />
+    <ClInclude Include="..\Shared\Public\Function.h" />
+    <ClInclude Include="..\Shared\Public\NoCopyObject.h" />
+    <ClInclude Include="..\Shared\Public\Packet_Utility.h" />
+    <ClInclude Include="ClientManager.h" />
+    <ClInclude Include="Client_Define.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
